@@ -8,7 +8,8 @@ const {
   handleUpdateProductById,
   handleDeleteProductById,
   getProductsByUserId,
-  getProductsByShopId,   
+  getProductsByShopId,
+  getNearbyProductsController   
  // handleGetHomeProducts
 } = require("../controller/product.controller");
 const { verifyToken } = require("../middleware/verifyToken");
@@ -20,6 +21,7 @@ router.get("/user/:userId", getProductsByUserId);
 router.put("/update/:id", handleUpdateProductById);
 router.delete("/:id", handleDeleteProductById);
 router.get("/by-shopId/:shopId", getProductsByShopId);
+router.get("/nearbyshop/:userId", getNearbyProductsController);  // shanky | location compare for homepage products route
 
 // //testing pincodeee productsss
 // router.get("/pincode/product",verifyToken,handleGetHomeProducts);

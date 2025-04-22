@@ -21,7 +21,7 @@ router.use("/api/order", orderRoutes);
 router.use("/api/subscription", subscriptionRoutes);
 router.use("/api/dashboard", dashboardRoutes);
 
-//testing
+//shanky
 router.use("/api/user", userRoutes);
 
 module.exports = router;

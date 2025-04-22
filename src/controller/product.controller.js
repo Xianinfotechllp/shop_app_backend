@@ -229,6 +229,60 @@ const getProductsByShopId = async (req, res) => {
   }
 };
 
+// shanky | comparing user and shop location to show only those shop products thats matches the user's location.. 
+async function getNearbyProductsController(req, res) {
+  try {
+    const { userId } = req.params;
+
+    //  Load the user
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    //  Find shops matching all 4 location fields
+    const matchingShops = await Shop.find({
+      state: user.state,
+      place: user.place,
+      locality: user.locality,
+      pinCode: user.pincode,
+    }).select("_id");
+
+    const shopIds = matchingShops.map((s) => s._id);
+    if (!shopIds.length) {
+      return res
+        .status(200)
+        .json({ message: "No shops in your area", products: [] });
+    }
+
+    //  Fetch products belonging to those shops
+    const products = await Product.find({ shop: { $in: shopIds } })
+      .populate("shop", "shopName state place locality pinCode")
+      .exec();
+
+    //  Return the filtered products
+    return res.status(200).json({ products });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error", error });
+  }
+}
+
+
+
+module.exports = {
+  handleCreateProduct,
+  handleGetAllProducts,
+  handleGetProductById,
+  handleUpdateProductById,
+  handleDeleteProductById,
+  getProductsByUserId,
+  getProductsByShopId,
+  getNearbyProductsController
+};
+
+
+
+
+
 
 
 
@@ -271,15 +325,5 @@ const getProductsByShopId = async (req, res) => {
 //     return res.status(500).json({ message: "Server error" });
 //   }
 // }
+//testing github branch
 
-
-module.exports = {
-  handleCreateProduct,
-  handleGetAllProducts,
-  handleGetProductById,
-  handleUpdateProductById,
-  handleDeleteProductById,
-  getProductsByUserId,
-  getProductsByShopId,
- // handleGetHomeProducts
-};
