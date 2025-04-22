@@ -9,8 +9,7 @@ const userModel = require("../models/user");
 // ✅ Create Shop
 const createShop = async (req, res) => {
   try {
-    const { shopName, category, sellerType, state, place, pinCode, userId } =
-      req.body;
+    const {shopName,category,sellerType,state,place,locality,pinCode,userId,} = req.body;
 
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
@@ -28,6 +27,7 @@ const createShop = async (req, res) => {
       sellerType,
       state,
       place,
+      locality,      // ✅ added in the object
       pinCode,
       headerImage: result.secure_url,
       owner: userId,
@@ -41,6 +41,7 @@ const createShop = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // ✅ Get All Shops
 const getShops = async (req, res) => {
@@ -112,22 +113,22 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shopName, category, sellerType, state, place, pinCode } = req.body;
+    const { shopName, category, sellerType, state, place,locality,pinCode } = req.body;
 
     const shop = await Shop.findById(id);
     if (!shop) throw new ApiError(404, "Shop not found");
 
     let updatedData = {
       shopName,
-      category: Array.isArray(category) ? category : [category], // ✅ Ensure category is always an array
+      category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
       place,
       pinCode,
+      locality, // ✅ Added
       owner: req.user?.id,
     };
 
-    // ✅ Update image if a new image is uploaded
     if (req.file) {
       const result = await cloudinary.v2.uploader.upload(req.file.path, {
         folder: "shops",
@@ -148,6 +149,7 @@ const updateShop = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // ✅ Delete Shop by ID
 const deleteShop = async (req, res) => {
