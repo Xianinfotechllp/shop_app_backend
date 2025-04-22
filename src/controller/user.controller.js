@@ -106,8 +106,66 @@ const handleUpdateUser = async (req, res) => {
   }
 };
 
+
+// shanky | GET user's location (state, place, locality, pincode)
+const getUserLocation = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.params.userId);  // Get user by ID from request params
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const { state, place, locality, pincode } = user;
+    res.json({
+      success: true,
+      message: "User location fetched successfully",
+      location: { state, place, locality, pincode },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// shanky | PUT to update user's location (state, place, locality, pincode)
+const updateUserLocation = async (req, res) => {
+  const { state, place, locality, pincode } = req.body;
+
+  // Check if at least one field is provided to update
+  if (!state && !place && !locality && !pincode) {
+    return res.status(400).json({ success: false, message: "At least one field must be provided for update" });
+  }
+
+  try {
+    const user = await userModel.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Only update the fields that are provided in the request body
+    if (state) user.state = state;
+    if (place) user.place = place;
+    if (locality) user.locality = locality;
+    if (pincode) user.pincode = pincode;
+
+    await user.save(); // Save the updated user
+
+    res.json({
+      success: true,
+      message: "User location updated successfully",
+      location: { state: user.state, place: user.place, locality: user.locality, pincode: user.pincode },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+
 module.exports = {
   handleGetAllUsers,
   handleGetUserById,
   handleUpdateUser,
+  getUserLocation,
+  updateUserLocation
 };

@@ -21,6 +21,10 @@ const userSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  locality: {
+    type: String,
+    required: true,
+  },
   pincode: {
     type: String,
     required: true,

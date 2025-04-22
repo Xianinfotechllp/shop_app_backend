@@ -30,6 +30,10 @@ const shopSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    locality: {
+      type: String,
+      required: true,
+    },
     pinCode: {
       type: String,
       required: true,
