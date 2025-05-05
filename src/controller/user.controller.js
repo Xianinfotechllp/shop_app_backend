@@ -161,11 +161,31 @@ const updateUserLocation = async (req, res) => {
 };
 
 
+// this is the user details api --
+// Controller: Get full user details by user ID
+const getUserDetailsController = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user", error });
+  }
+};
+
+
 
 module.exports = {
   handleGetAllUsers,
   handleGetUserById,
   handleUpdateUser,
   getUserLocation,
-  updateUserLocation
+  updateUserLocation,
+  getUserDetailsController
 };
