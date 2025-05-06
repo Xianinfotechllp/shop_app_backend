@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   createCategory,
   getCategories,
-  getFixedCategoryController
+  getFixedCategoryController,
+  getKeyFixedCategory
 } = require("../controller/category.Controller");
 
 // Route to create a new category
@@ -15,5 +16,7 @@ router.get("/", getCategories);
 // shanky | Route to fetch fixed categories 
 
 router.get("/FixedCategory",getFixedCategoryController)
+
+router.get("/Key/WithFixedCategory", getKeyFixedCategory);
 
 module.exports = router;
