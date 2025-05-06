@@ -75,13 +75,42 @@ const getFixedCategoryController = async (req,res) =>{
   }
 }
 
+// making api to fetch the catefories with the key , these are not all categories that are present in getfixedcategory api up there , there are few of them which has keys with them so we 
+// we can fetch the key and its key values on frontend if we want -- like key on one page and when we 
+// click on key another page will open it will show its related value inside...
 
+const getKeyFixedCategory = async (req,res) => {
+
+  try{
+    const KeyWithCategory = {
+      "Fresh Produce": ["Fruits", "Vegetables", "Leafy Greens", "Herbs"],
+      "Bakery Items": ["Bread", "Buns", "Cakes", "Cookies", "Pastries"],
+      "Meat & Seafood": ["Chicken", "Mutton", "Fish", "Eggs", "Prawns"],
+      "Dairy Products": ["Milk", "Curd", "Butter", "Cheese", "Ghee"],
+      "Oils & Ghee": ["Cooking Oil (Sunflower, Mustard, Coconut, etc.)", "Ghee"],
+      "Grains & Pulses": ["Rice (Basmati, Sona Masoori, etc.)", "Wheat Flour (Atta)", "Pulses (Toor Dal, Moong Dal, Chana Dal, etc.)", "Lentils"],
+      "Packaged Foods": ["Biscuits", "Noodles", "Pasta", "Snacks", "Ready-to-eat meals"],
+      "Beverages": ["Tea", "Coffee", "Soft Drinks", "Juices", "Energy Drinks"],
+      "Spices & Condiments": ["Salt", "Sugar", "Turmeric", "Chilli Powder", "Garam Masala", "Pickles"],
+      "Personal Care": ["Soap", "Shampoo", "Toothpaste", "Sanitary Pads", "Shaving Cream"],
+      "Home Essentials": ["Detergents", "Dishwash Liquid", "Toilet Cleaner", "Air Fresheners", "Tissues"]
+    };
+
+    res.status(200).json({KeyWithCategory})
+
+
+  }catch(error){
+
+    res.status(500).json({message :"something went wrong .."})
+  }
+}
 
 
 module.exports = {
   createCategory,
   getCategories,
-  getFixedCategoryController
+  getFixedCategoryController,
+  getKeyFixedCategory
 };
 
 
