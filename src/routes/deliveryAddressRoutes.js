@@ -16,9 +16,9 @@ router.post('/create/:userId', createAddressController);
 router.get('/get/:userId', getAddressesController);
 
 // Update address by index
-router.put('/update/:userId/:index', updateAddressController);
+router.put('/update/:userId/:addressId', updateAddressController);
 
 // Delete address by index
-router.delete('/delete/:userId/:index', deleteAddressController);
+router.delete('/delete/:userId/:addressId', deleteAddressController);
 
 module.exports = router;
