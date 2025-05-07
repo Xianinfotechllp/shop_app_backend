@@ -4,19 +4,21 @@ const {
   createAddressController,
   getAddressesController,
   updateAddressController,
-  deleteAddressController
-} = require('./deliveryAddress.controller');
+  deleteAddressController 
+} = require('../controller/deliveryAddresscontroller');
 
-// Add address
-router.post('/', createAddressController);
+
+
+// Add address here
+router.post('/create/:userId', createAddressController);
 
 // Get all addresses for a user
-router.get('/:userId', getAddressesController);
+router.get('/get/:userId', getAddressesController);
 
 // Update address by index
-router.put('/:userId/:index', updateAddressController);
+router.put('/update/:userId/:index', updateAddressController);
 
 // Delete address by index
-router.delete('/:userId/:index', deleteAddressController);
+router.delete('/delete/:userId/:index', deleteAddressController);
 
 module.exports = router;
