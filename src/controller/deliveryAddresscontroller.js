@@ -31,12 +31,18 @@ exports.getAddressesController = async (req, res) => {
 // Update one address from array using index
 exports.updateAddressController = async (req, res) => {
   try {
-    const { userId, index } = req.params;
+    const { userId, addressId } = req.params;
     const { address } = req.body;
+
     const doc = await DeliveryAddress.findOne({ userId });
-    if (!doc || !doc.addresses[index]) return res.status(404).json({ message: 'Address not found' });
-    doc.addresses[index] = address;
+    if (!doc) return res.status(404).json({ message: 'User not found' });
+
+    const addr = doc.addresses.id(addressId);
+    if (!addr) return res.status(404).json({ message: 'Address not found' });
+
+    Object.assign(addr, address); // merge new values into existing
     await doc.save();
+
     res.json({ message: 'Address updated', addresses: doc.addresses });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -46,11 +52,17 @@ exports.updateAddressController = async (req, res) => {
 // Delete one address using index
 exports.deleteAddressController = async (req, res) => {
   try {
-    const { userId, index } = req.params;
+    const { userId, addressId } = req.params;
+
     const doc = await DeliveryAddress.findOne({ userId });
-    if (!doc || !doc.addresses[index]) return res.status(404).json({ message: 'Address not found' });
-    doc.addresses.splice(index, 1);
+    if (!doc) return res.status(404).json({ message: 'User not found' });
+
+    const addr = doc.addresses.id(addressId);
+    if (!addr) return res.status(404).json({ message: 'Address not found' });
+
+    addr.remove();
     await doc.save();
+
     res.json({ message: 'Address deleted', addresses: doc.addresses });
   } catch (err) {
     res.status(500).json({ error: err.message });
