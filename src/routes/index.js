@@ -10,6 +10,7 @@ const subscriptionRoutes = require("./subscriptionRoutes");
 const dashboardRoutes = require("./dashboardRoutes");
 const shopRoutes = require("./shopRoutes");
 const categoryRoutes = require("./categoryRoutes");
+const deliveryAddressRoutes = require("./deliveryAddressRoutes")
 
 router.use("/auth/user", userAuthRoutes);
 router.use("/auth/admin", adminAuthRoutes);
@@ -20,6 +21,7 @@ router.use("/api/cart", cartRoutes);
 router.use("/api/order", orderRoutes);
 router.use("/api/subscription", subscriptionRoutes);
 router.use("/api/dashboard", dashboardRoutes);
+router.use("/api/delivery", deliveryAddressRoutes);
 
 //shanky
 router.use("/api/user", userRoutes);
