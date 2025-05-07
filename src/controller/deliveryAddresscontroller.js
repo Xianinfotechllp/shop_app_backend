@@ -57,17 +57,18 @@ exports.deleteAddressController = async (req, res) => {
     const doc = await DeliveryAddress.findOne({ userId });
     if (!doc) return res.status(404).json({ message: 'User not found' });
 
-    const addr = doc.addresses.id(addressId);
-    if (!addr) return res.status(404).json({ message: 'Address not found' });
+    // Keep only those addresses whose _id does *not* match addressId
+    doc.addresses = doc.addresses.filter(
+      addr => addr._id.toString() !== addressId
+    );
 
-    addr.remove();
     await doc.save();
-
     res.json({ message: 'Address deleted', addresses: doc.addresses });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 
 ///iiehfinvernvnr
