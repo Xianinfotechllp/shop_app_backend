@@ -1,9 +1,10 @@
-const DeliveryAddress = require('./deliveryAddress.model');
+const DeliveryAddress = require('../models/deliveryAddressmodel.js');
 
 // Add a new address (pushed into array)
 exports.createAddressController = async (req, res) => {
   try {
-    const { userId, address } = req.body;
+    const {userId} = req.params;
+    const { address } = req.body;
     const updated = await DeliveryAddress.findOneAndUpdate(
       { userId },
       { $push: { addresses: address } },
