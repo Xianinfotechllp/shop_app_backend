@@ -150,6 +150,10 @@ const handleUpdateProductById = async (req, res) => {
   const adminId = req.user?.id || "unknown";
   const productData = req.body;
 
+
+console.log("Incoming update body:", req.body);
+
+
   debug(
     `Update product request - ID: ${id}, Admin: ${adminId}, Fields: ${Object.keys(
       productData
@@ -157,6 +161,7 @@ const handleUpdateProductById = async (req, res) => {
   );
 
   try {
+    // Call the update function
     const updatedProduct = await productService.updateProductById(
       id,
       productData
