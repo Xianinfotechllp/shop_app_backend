@@ -76,22 +76,33 @@ const create = async (model, data) => {
 
 const update = async (model, id, updateData) => {
   try {
+    // Validate if the ID is in valid ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new ApiError(400, "Invalid ID format");
     }
 
+    // Log the data being passed for debugging purposes
+    console.log("Update data:", updateData);
+
+    // Update the record
     const updatedRecord = await model.findByIdAndUpdate(id, updateData, {
-      new: true,
+      new: true, // Return the updated document
+      runValidators: true, // Run validators on the update
     });
 
+    // If no record is found, throw an error
     if (!updatedRecord) {
       throw new ApiError(404, `Record with ID ${id} not found for update`);
     }
+
     return updatedRecord;
   } catch (error) {
+    // If the error is a custom ApiError, rethrow it
     if (error instanceof ApiError) {
       throw error;
     }
+    // Otherwise, log the error and throw a generic API error
+    console.error("Error updating record:", error);
     throw new ApiError(500, "Error updating record");
   }
 };

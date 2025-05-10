@@ -19,7 +19,10 @@ const productValidationSchema = Joi.object({
 
   // Added userId and adminId validation
   userId: Joi.string().optional().allow(null),      // Accepts string or null
-  adminId: Joi.string().optional().allow(null)      // Accepts string or null
+  adminId: Joi.string().optional().allow(null),      // Accepts string or null
+
+  // Add favorite field validation
+  favorite: Joi.boolean().optional() 
 });
 
 
