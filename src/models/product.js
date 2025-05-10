@@ -51,6 +51,11 @@ const productSchema = mongoose.Schema(
     },
     adminId: { type: String, required: false }, // Ensure it's a string
     userId: { type: String, required: false },
+
+    favorite: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
