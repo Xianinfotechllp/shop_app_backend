@@ -9,7 +9,8 @@ const productValidationSchema = Joi.object({
   name: Joi.string().required(),
   description: Joi.string().optional(),
   price: Joi.number().required(),
-  category: Joi.array().items(Joi.string()).optional(),  // Accepting array of strings
+  category: Joi.string().required(), 
+  // category: Joi.array().items(Joi.string()).optional(),  // Accepting array of strings
   quantity: Joi.number().required().min(1),
   productImage: Joi.string().optional(),
   sold: Joi.number().optional(),
