@@ -22,13 +22,6 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    category:
-    //  [
-      {
-        type: String, // shanky | we changed it to from array to simple string , it was causing the error Store category names directly
-        required: true,
-      },
-    // ],
     productImage: {
       type: String,
     },
@@ -57,6 +50,11 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    category: {
+      type: String,
+      required: true,
+    }
+
   },
   { timestamps: true }
 );
@@ -64,3 +62,18 @@ const productSchema = mongoose.Schema(
 const productModel = mongoose.model("products", productSchema);
 
 module.exports = productModel;
+
+
+
+
+// first we were using this category type but it is giving error 
+
+
+// category:
+//    [
+//     {
+//       type: String,
+//       required: true,
+//     },
+//    ],
+
