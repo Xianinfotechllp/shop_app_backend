@@ -39,6 +39,12 @@ const userSchema = mongoose.Schema({
     ref: "Subscription",
     default: null,
   },
+  favorites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,    //  new fields for saving the users favorite products 
+      ref: "products",
+    },
+  ],
 });
 
 const userModel = mongoose.model("user", userSchema);

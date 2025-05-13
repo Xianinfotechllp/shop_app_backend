@@ -22,12 +22,13 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    category: [
+    category:
+    //  [
       {
-        type: String, // Store category names directly
+        type: String, // shanky | we changed it to from array to simple string , it was causing the error Store category names directly
         required: true,
       },
-    ],
+    // ],
     productImage: {
       type: String,
     },
