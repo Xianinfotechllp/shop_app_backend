@@ -5,7 +5,7 @@ const { info, error, debug } = require("../middleware/logger");
 
 async function handleUserRegistration(req, res) {
   try {
-    const { name, mobileNumber, state, password, place, pincode } = req.body;
+    const { name, mobileNumber, state, password, place, pincode,locality } = req.body;
     
     debug(`User registration attempt - Name: ${name}, MobileNumber: ${mobileNumber}`);
     
@@ -31,6 +31,7 @@ async function handleUserRegistration(req, res) {
       password: hashedPassword,
       place,
       pincode,
+      locality
     });
     await newUser.save();
     
@@ -39,7 +40,8 @@ async function handleUserRegistration(req, res) {
       process.env.JWT_SECRET,
       { expiresIn: "365d" }
     );
-    
+    console.log("🔐 JWT_SECRET:", process.env.JWT_SECRET);
+
     info(`User registered successfully - ID: ${newUser._id}, Name: ${name}, MobileNumber: ${mobileNumber}`);
     
     return res.status(201).json({
@@ -51,14 +53,15 @@ async function handleUserRegistration(req, res) {
         state,
         place,
         pincode,
+        locality
       },
       token,
     });
   } catch (err) {
-    error(`Registration error - Error: ${err.message}`);
-    console.error("Error in registration:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
+  error(`Registration error - Error: ${err.message}`);
+  console.error("Error in registration:", err);
+  return res.status(500).json({ message: "Server error" });
+}
 }
 
 async function handleUserLogin(req, res) {

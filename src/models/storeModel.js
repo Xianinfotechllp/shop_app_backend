@@ -49,3 +49,9 @@ const shopSchema = mongoose.Schema(
 const Shop = mongoose.model("Shop", shopSchema);
 
 module.exports = Shop;
+
+
+
+
+// edappal
+// 679576
