@@ -243,13 +243,13 @@ async function getNearbyProductsController(req, res) {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    //  Find shops matching all 4 location fields
+    //  Find shops matching all 4 location fields  / made the search of location incase sensitive
     const matchingShops = await Shop.find({
-      state: user.state,
-      place: user.place,
-      locality: user.locality,
-      pinCode: user.pincode,
-    }).select("_id");
+  state:    new RegExp(`^${user.state}$`, 'i'),    // case-insensitive
+  place:    new RegExp(`^${user.place}$`, 'i'),    
+  locality: new RegExp(`^${user.locality}$`, 'i'),
+  pinCode:  user.pincode,
+}).select("_id");
 
     const shopIds = matchingShops.map((s) => s._id);
     if (!shopIds.length) {
