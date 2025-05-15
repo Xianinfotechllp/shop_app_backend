@@ -35,10 +35,28 @@ async function removeFavoriteController(req, res) {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    const product = await Product.findById(productId);
+
+    // Remove the product ID from favorites regardless of its existence
+    const originalLength = user.favorites.length;
     user.favorites = user.favorites.filter(id => id.toString() !== productId);
+
+    if (user.favorites.length === originalLength) {
+      return res.status(404).json({ message: 'Product not found in favorites' });
+    }
+
     await user.save();
 
-    res.status(200).json({ favorites: user.favorites });
+    // Show message if the product itself was missing
+    const responseMessage = product
+      ? 'Product removed from favorites'
+      : 'Product was deleted earlier, removed reference from favorites';
+
+    res.status(200).json({
+      message: responseMessage,
+      favorites: user.favorites
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
