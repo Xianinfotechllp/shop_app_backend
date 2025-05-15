@@ -40,7 +40,7 @@ async function handleUserRegistration(req, res) {
       process.env.JWT_SECRET,
       { expiresIn: "365d" }
     );
-    console.log("🔐 JWT_SECRET:", process.env.JWT_SECRET);
+    // console.log("🔐 JWT_SECRET:", process.env.JWT_SECRET);
 
     info(`User registered successfully - ID: ${newUser._id}, Name: ${name}, MobileNumber: ${mobileNumber}`);
     
