@@ -3,9 +3,13 @@ const userModel = require("../models/user");
 const jwt = require("jsonwebtoken");
 const { info, error, debug } = require("../middleware/logger");
 
+
+// removed the place fields from location here
 async function handleUserRegistration(req, res) {
   try {
-    const { name, mobileNumber, state, password, place, pincode,locality } = req.body;
+    const { name, mobileNumber, state, password, pincode, locality } = req.body;
+    
+    console.log(name, mobileNumber, state, password, pincode, locality);
     
     debug(`User registration attempt - Name: ${name}, MobileNumber: ${mobileNumber}`);
     
@@ -29,7 +33,6 @@ async function handleUserRegistration(req, res) {
       mobileNumber, 
       state,
       password: hashedPassword,
-      place,
       pincode,
       locality
     });
@@ -40,7 +43,6 @@ async function handleUserRegistration(req, res) {
       process.env.JWT_SECRET,
       { expiresIn: "365d" }
     );
-    // console.log("🔐 JWT_SECRET:", process.env.JWT_SECRET);
 
     info(`User registered successfully - ID: ${newUser._id}, Name: ${name}, MobileNumber: ${mobileNumber}`);
     
@@ -51,17 +53,16 @@ async function handleUserRegistration(req, res) {
         name,
         mobileNumber, 
         state,
-        place,
         pincode,
         locality
       },
       token,
     });
   } catch (err) {
-  error(`Registration error - Error: ${err.message}`);
-  console.error("Error in registration:", err);
-  return res.status(500).json({ message: "Server error" });
-}
+    error(`Registration error - Error: ${err.message}`);
+    console.error("Error in registration:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }
 
 async function handleUserLogin(req, res) {
