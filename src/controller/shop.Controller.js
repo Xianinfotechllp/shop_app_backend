@@ -9,7 +9,7 @@ const userModel = require("../models/user");
 // ✅ Create Shop
 const createShop = async (req, res) => {
   try {
-    const { shopName, category, sellerType, state, locality, pinCode, userId } = req.body;
+    const { shopName, category, sellerType, state, /* locality, */ pinCode, userId } = req.body;
 
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
@@ -26,7 +26,7 @@ const createShop = async (req, res) => {
       category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
-      locality,
+      // locality, // not needed rn
       pinCode,
       headerImage: result.secure_url,
       owner: userId,
@@ -107,7 +107,7 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shopName, category, sellerType, state, locality, pinCode } = req.body;
+    const { shopName, category, sellerType, state, /* locality, */ pinCode } = req.body;
 
     const shop = await Shop.findById(id);
     if (!shop) throw new ApiError(404, "Shop not found");
@@ -118,7 +118,7 @@ const updateShop = async (req, res) => {
       sellerType,
       state,
       pinCode,
-      locality,
+      // locality, // not needed rn
       owner: req.user?.id,
     };
 
