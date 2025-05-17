@@ -234,6 +234,9 @@ const getProductsByShopId = async (req, res) => {
   }
 };
 
+//-------------------------------------------------------------------------------------------
+// location
+
 // shanky | comparing user and shop location to show only those shop products thats matches the user's location.. 
 async function getNearbyProductsController(req, res) {
   try {
@@ -246,8 +249,8 @@ async function getNearbyProductsController(req, res) {
     //  Find shops matching all 4 location fields  / made the search of location incase sensitive
     const matchingShops = await Shop.find({
   state:    new RegExp(`^${user.state}$`, 'i'),    // case-insensitive
-  place:    new RegExp(`^${user.place}$`, 'i'),    
-  locality: new RegExp(`^${user.locality}$`, 'i'),
+  // place:    new RegExp(`^${user.place}$`, 'i'),    
+  // locality: new RegExp(`^${user.locality}$`, 'i'),
   pinCode:  user.pincode,
 }).select("_id");
 
@@ -281,7 +284,7 @@ module.exports = {
   handleDeleteProductById,
   getProductsByUserId,
   getProductsByShopId,
-  getNearbyProductsController
+  getNearbyProductsController   // this is the location comparing controller for hompage products
 };
 
 
