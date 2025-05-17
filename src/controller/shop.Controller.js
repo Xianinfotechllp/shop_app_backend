@@ -9,7 +9,7 @@ const userModel = require("../models/user");
 // ✅ Create Shop
 const createShop = async (req, res) => {
   try {
-    const {shopName,category,sellerType,state,place,locality,pinCode,userId,} = req.body;
+    const { shopName, category, sellerType, state, locality, pinCode, userId } = req.body;
 
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
@@ -26,22 +26,18 @@ const createShop = async (req, res) => {
       category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
-      place,
-      locality,      // ✅ added in the object
+      locality,
       pinCode,
       headerImage: result.secure_url,
       owner: userId,
     });
 
     await newShop.save();
-    res
-      .status(201)
-      .json({ message: "Shop created successfully", shop: newShop });
+    res.status(201).json({ message: "Shop created successfully", shop: newShop });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // ✅ Get All Shops
 const getShops = async (req, res) => {
@@ -67,7 +63,7 @@ const getShopById = async (req, res) => {
   }
 };
 
-// ✅ Get Single Shop by ID
+// ✅ Get Shop by User
 const getShopByUser = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -84,7 +80,7 @@ const getShopByUser = async (req, res) => {
     }
 
     const shops = await Shop.find({ owner: user.id }).select(
-      "_id shopName place sellerType state headerImage category pinCode"
+      "_id shopName sellerType state headerImage category pinCode"
     );
 
     if (!shops || shops.length === 0) {
@@ -100,9 +96,7 @@ const getShopByUser = async (req, res) => {
       data: shops,
     });
   } catch (err) {
-    error(
-      `Failed to fetch shops - UserID: ${req.user.id}, Error: ${err.message}`
-    );
+    error(`Failed to fetch shops - UserID: ${req.user.id}, Error: ${err.message}`);
     const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     const message = err.message || "Internal Server Error";
     res.status(statusCode).json({ message });
@@ -113,7 +107,7 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shopName, category, sellerType, state, place,locality,pinCode } = req.body;
+    const { shopName, category, sellerType, state, locality, pinCode } = req.body;
 
     const shop = await Shop.findById(id);
     if (!shop) throw new ApiError(404, "Shop not found");
@@ -123,9 +117,8 @@ const updateShop = async (req, res) => {
       category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
-      place,
       pinCode,
-      locality, // ✅ Added
+      locality,
       owner: req.user?.id,
     };
 
@@ -142,14 +135,11 @@ const updateShop = async (req, res) => {
       new: true,
     });
 
-    res
-      .status(200)
-      .json({ message: "Shop updated successfully", shop: updatedShop });
+    res.status(200).json({ message: "Shop updated successfully", shop: updatedShop });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // ✅ Delete Shop by ID
 const deleteShop = async (req, res) => {
@@ -174,3 +164,4 @@ module.exports = {
   deleteShop,
   getShopByUser,
 };
+
