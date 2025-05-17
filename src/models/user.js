@@ -21,10 +21,10 @@ const userSchema = mongoose.Schema({
   //   type: String,      // we removed the place in location comparing cz we are not getting this from the google map response
   //   required: true,
   // },
-  locality: {
-    type: String,
-    required: true,
-  },
+  // locality: {
+  //   type: String,      // we removed the locality in location comparing cz we are not getting this from the google map response
+  //   required: true,
+  // },
   pincode: {
     type: String,
     required: true,
