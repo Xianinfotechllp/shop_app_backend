@@ -107,6 +107,7 @@ const handleUpdateUser = async (req, res) => {
 };
 
 // shanky | GET user's location (state, pincode)
+// GET - Fetch user location
 const getUserLocation = async (req, res) => {
   try {
     const user = await userModel.findById(req.params.userId);
@@ -114,13 +115,14 @@ const getUserLocation = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const { state, /* locality, */ pincode } = user;
+    const { state, locality, place, pincode } = user;
     res.json({
       success: true,
       message: "User location fetched successfully",
       location: {
         state,
-        // locality, // not needed right now
+        locality,
+        place,
         pincode,
       },
     });
@@ -129,11 +131,11 @@ const getUserLocation = async (req, res) => {
   }
 };
 
-// shanky | PUT to update user's location (state, pincode)
+// PUT - Update user location
 const updateUserLocation = async (req, res) => {
-  const { state, /* locality, */ pincode } = req.body;
+  const { state, locality, place, pincode } = req.body;
 
-  if (!state /* && !locality */ && !pincode) {
+  if (!state && !locality && !place && !pincode) {
     return res.status(400).json({
       success: false,
       message: "At least one field must be provided for update",
@@ -142,13 +144,13 @@ const updateUserLocation = async (req, res) => {
 
   try {
     const user = await userModel.findById(req.params.userId);
-
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
     if (state) user.state = state;
-    // if (locality) user.locality = locality; // not needed right now
+    if (locality) user.locality = locality;
+    if (place) user.place = place;
     if (pincode) user.pincode = pincode;
 
     await user.save();
@@ -158,7 +160,8 @@ const updateUserLocation = async (req, res) => {
       message: "User location updated successfully",
       location: {
         state: user.state,
-        // locality: user.locality, // not needed right now
+        locality: user.locality,
+        place: user.place,
         pincode: user.pincode,
       },
     });
