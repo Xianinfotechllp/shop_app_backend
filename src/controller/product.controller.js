@@ -277,52 +277,64 @@ async function getNearbyProductsController(req, res) {
 // search bar filter controller which sends the product when we search either product namr or locality or place
 
 const searchProducts = async (req, res) => {
-  const { query } = req.params;
-  if (!query) {
+  const { productName, location } = req.params;
+
+  if (!productName && !location) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: "Please provide a search term in the URL as `/search/your-query`",
+      message: "Please provide at least one search term in the params: productName or location.",
     });
   }
 
-  const regex = new RegExp(query, "i");
-  debug(`Search query="${query}" by user=${req.user?.id || "guest"}`);
-
   try {
-    // 1) Try matching product names
-    let products = await productModel.find({ name: { $regex: regex } });
-    if (products.length > 0) {
-      info(`Found ${products.length} products by name="${query}"`);
+    let products = [];
+
+    // 🔍 If both productName and location are provided
+    if (productName && location) {
+      const shopRegex = new RegExp(location, "i");
+      const matchingShops = await shopModel.find({
+        $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
+      }, "_id");
+
+      if (matchingShops.length === 0) {
+        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "No shops found for the given location." });
+      }
+
+      const shopIds = matchingShops.map(shop => shop._id);
+      const nameRegex = new RegExp(productName, "i");
+      products = await productModel.find({
+        name: { $regex: nameRegex },
+        shop: { $in: shopIds },
+      });
+
       return res.status(StatusCodes.OK).json({ success: true, data: products });
     }
 
-    // 2) Try matching shops by locality
-    const shopsByLocality = await shopModel.find({ locality: { $regex: regex } }, "_id");
-    if (shopsByLocality.length > 0) {
-      const shopIds = shopsByLocality.map(s => s._id);
+    // 🔍 If only productName is provided
+    if (productName) {
+      const nameRegex = new RegExp(productName, "i");
+      products = await productModel.find({ name: { $regex: nameRegex } });
+      return res.status(StatusCodes.OK).json({ success: true, data: products });
+    }
+
+    // 🔍 If only location is provided
+    if (location) {
+      const shopRegex = new RegExp(location, "i");
+      const matchingShops = await shopModel.find({
+        $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
+      }, "_id");
+
+      if (matchingShops.length === 0) {
+        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "No shops found for the given location." });
+      }
+
+      const shopIds = matchingShops.map(shop => shop._id);
       products = await productModel.find({ shop: { $in: shopIds } });
-      info(`Found ${products.length} products in locality="${query}"`);
       return res.status(StatusCodes.OK).json({ success: true, data: products });
     }
-
-    // 3) Try matching shops by place
-    const shopsByPlace = await shopModel.find({ place: { $regex: regex } }, "_id");
-    if (shopsByPlace.length > 0) {
-      const shopIds = shopsByPlace.map(s => s._id);
-      products = await productModel.find({ shop: { $in: shopIds } });
-      info(`Found ${products.length} products in place="${query}"`);
-      return res.status(StatusCodes.OK).json({ success: true, data: products });
-    }
-
-    // nothing matched
-    info(`No products found for query="${query}"`);
-    return res.status(StatusCodes.NOT_FOUND).json({
-      success: false,
-      message: "No matching products found.",
-    });
 
   } catch (err) {
-    error(`Search error query="${query}" - ${err.message}`);
+    console.error(`Search error - ${err.message}`);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Server error",
