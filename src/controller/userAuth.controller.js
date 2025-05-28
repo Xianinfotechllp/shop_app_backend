@@ -4,12 +4,12 @@ const jwt = require("jsonwebtoken");
 const { info, error, debug } = require("../middleware/logger");
 
 
-// removed the place and locality fields from location here
+// place and locality added back to location fields
 async function handleUserRegistration(req, res) {
   try {
-    const { name, mobileNumber, state, password, pincode } = req.body;
+    const { name, mobileNumber, state, password, pincode, place, locality } = req.body;
 
-    console.log(name, mobileNumber, state, password, pincode);
+    console.log(name, mobileNumber, state, password, pincode, place, locality);
 
     debug(`User registration attempt - Name: ${name}, MobileNumber: ${mobileNumber}`);
 
@@ -33,7 +33,9 @@ async function handleUserRegistration(req, res) {
       mobileNumber,
       state,
       password: hashedPassword,
-      pincode
+      pincode,
+      place,
+      locality
     });
     await newUser.save();
 
@@ -52,7 +54,9 @@ async function handleUserRegistration(req, res) {
         name,
         mobileNumber,
         state,
-        pincode
+        pincode,
+        place,
+        locality
       },
       token,
     });

@@ -9,16 +9,14 @@ const userModel = require("../models/user");
 // ✅ Create Shop
 const createShop = async (req, res) => {
   try {
-    const { shopName, category, sellerType, state, /* locality, */ pinCode, userId } = req.body;
+    const { shopName, category, sellerType, state, locality, place, pinCode, userId } = req.body;
 
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
-    // Upload image to Cloudinary
     const result = await cloudinary.v2.uploader.upload(req.file.path, {
       folder: "shops",
     });
 
-    // Remove the local file after upload
     fs.unlinkSync(req.file.path);
 
     const newShop = new Shop({
@@ -26,7 +24,8 @@ const createShop = async (req, res) => {
       category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
-      // locality, // not needed rn
+      locality,
+      place,
       pinCode,
       headerImage: result.secure_url,
       owner: userId,
@@ -38,6 +37,7 @@ const createShop = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // ✅ Get All Shops
 const getShops = async (req, res) => {
@@ -80,7 +80,7 @@ const getShopByUser = async (req, res) => {
     }
 
     const shops = await Shop.find({ owner: user.id }).select(
-      "_id shopName sellerType state headerImage category pinCode"
+      "_id shopName sellerType state locality place headerImage category pinCode"
     );
 
     if (!shops || shops.length === 0) {
@@ -107,7 +107,7 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shopName, category, sellerType, state, /* locality, */ pinCode } = req.body;
+    const { shopName, category, sellerType, state, locality, place, pinCode } = req.body;
 
     const shop = await Shop.findById(id);
     if (!shop) throw new ApiError(404, "Shop not found");
@@ -117,8 +117,9 @@ const updateShop = async (req, res) => {
       category: Array.isArray(category) ? category : [category],
       sellerType,
       state,
+      locality,
+      place,
       pinCode,
-      // locality, // not needed rn
       owner: req.user?.id,
     };
 
@@ -131,15 +132,14 @@ const updateShop = async (req, res) => {
       updatedData.headerImage = result.secure_url;
     }
 
-    const updatedShop = await Shop.findByIdAndUpdate(id, updatedData, {
-      new: true,
-    });
+    const updatedShop = await Shop.findByIdAndUpdate(id, updatedData, { new: true });
 
     res.status(200).json({ message: "Shop updated successfully", shop: updatedShop });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // ✅ Delete Shop by ID
 const deleteShop = async (req, res) => {
