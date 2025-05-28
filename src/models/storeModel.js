@@ -26,14 +26,14 @@ const shopSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    // place: {
-    //   type: String,    // we removed the place in location comparing cz we are not getting this from the google map response
-    //   required: true,
-    // },
-    // locality: {
-    //   type: String,    // we removed the locality in location comparing cz we are not getting this from the google map response
-    //   required: true,
-    // },
+    place: {
+      type: String,    
+      required: true,
+    },
+    locality: {
+      type: String,   
+      required: true,
+    },
     pinCode: {
       type: String,
       required: true,
