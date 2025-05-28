@@ -1,4 +1,6 @@
 const productModel = require("../models/product");
+const shopModel = require("../models/storeModel");
+const { StatusCodes } = require("http-status-codes");
 const productService = require("../service/product.service");
 const { info, error, debug } = require("../middleware/logger");
 const Shop = require("../models/storeModel");
@@ -274,6 +276,59 @@ async function getNearbyProductsController(req, res) {
   }
 }
 
+// search bar filter controller which sends the product when we search either product namr or locality or place
+
+const searchProducts = async (req, res) => {
+  const { query } = req.body;
+  if (!query) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Please provide a search term in the request body via `{ query: '...' }`",
+    });
+  }
+
+  const regex = new RegExp(query, "i");
+  debug(`Search query="${query}" by user=${req.user?.id || "guest"}`);
+
+  try {
+    // 1) Try matching product names
+    let products = await productModel.find({ name: { $regex: regex } });
+    if (products.length > 0) {
+      info(`Found ${products.length} products by name="${query}"`);
+      return res.status(StatusCodes.OK).json({ success: true, data: products });
+    }
+
+    // 2) Try matching shops by locality
+    const shopsByLocality = await shopModel.find({ locality: { $regex: regex } }, "_id");
+    if (shopsByLocality.length > 0) {
+      const shopIds = shopsByLocality.map(s => s._id);
+      products = await productModel.find({ shop: { $in: shopIds } });
+      info(`Found ${products.length} products in locality="${query}"`);
+      return res.status(StatusCodes.OK).json({ success: true, data: products });
+    }
+
+    // 3) Try matching shops by place
+    const shopsByPlace = await shopModel.find({ place: { $regex: regex } }, "_id");
+    if (shopsByPlace.length > 0) {
+      const shopIds = shopsByPlace.map(s => s._id);
+      products = await productModel.find({ shop: { $in: shopIds } });
+      info(`Found ${products.length} products in place="${query}"`);
+      return res.status(StatusCodes.OK).json({ success: true, data: products });
+    }
+
+    // nothing matched
+    info(`No products found for query="${query}"`);
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ success: false, message: "No matching products found." });
+
+  } catch (err) {
+    error(`Search error query="${query}" - ${err.message}`);
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: "Server error" });
+  }
+};
 
 
 module.exports = {
@@ -284,7 +339,8 @@ module.exports = {
   handleDeleteProductById,
   getProductsByUserId,
   getProductsByShopId,
-  getNearbyProductsController   // this is the location comparing controller for hompage products
+  getNearbyProductsController,   // this is the location comparing controller for hompage products
+  searchProducts
 };
 
 
