@@ -8,8 +8,6 @@ const User = require("../models/user");
 const Product = require("../models/product");
 
 
-
-
 const handleCreateProduct = async (req, res) => {
   const { adminId, userId } = req.body;
 
@@ -279,11 +277,11 @@ async function getNearbyProductsController(req, res) {
 // search bar filter controller which sends the product when we search either product namr or locality or place
 
 const searchProducts = async (req, res) => {
-  const { query } = req.body;
+  const { query } = req.params;
   if (!query) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: "Please provide a search term in the request body via `{ query: '...' }`",
+      message: "Please provide a search term in the URL as `/search/your-query`",
     });
   }
 
@@ -318,15 +316,17 @@ const searchProducts = async (req, res) => {
 
     // nothing matched
     info(`No products found for query="${query}"`);
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json({ success: false, message: "No matching products found." });
+    return res.status(StatusCodes.NOT_FOUND).json({
+      success: false,
+      message: "No matching products found.",
+    });
 
   } catch (err) {
     error(`Search error query="${query}" - ${err.message}`);
-    return res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ success: false, message: "Server error" });
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
 
