@@ -279,7 +279,10 @@ async function getNearbyProductsController(req, res) {
 const searchProducts = async (req, res) => {
   const { productName, location } = req.params;
 
-  if (!productName && !location) {
+  const validProductName = productName && productName !== "null" && productName !== "undefined";
+  const validLocation = location && location !== "null" && location !== "undefined";
+
+  if (!validProductName && !validLocation) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
       message: "Please provide at least one search term in the params: productName or location.",
@@ -290,7 +293,7 @@ const searchProducts = async (req, res) => {
     let products = [];
 
     // 🔍 If both productName and location are provided
-    if (productName && location) {
+    if (validProductName && validLocation) {
       const shopRegex = new RegExp(location, "i");
       const matchingShops = await shopModel.find({
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
@@ -311,14 +314,14 @@ const searchProducts = async (req, res) => {
     }
 
     // 🔍 If only productName is provided
-    if (productName) {
+    if (validProductName) {
       const nameRegex = new RegExp(productName, "i");
       products = await productModel.find({ name: { $regex: nameRegex } });
       return res.status(StatusCodes.OK).json({ success: true, data: products });
     }
 
     // 🔍 If only location is provided
-    if (location) {
+    if (validLocation) {
       const shopRegex = new RegExp(location, "i");
       const matchingShops = await shopModel.find({
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
@@ -341,6 +344,7 @@ const searchProducts = async (req, res) => {
     });
   }
 };
+
 
 
 module.exports = {
