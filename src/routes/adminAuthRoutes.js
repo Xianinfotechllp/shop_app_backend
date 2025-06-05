@@ -5,9 +5,9 @@ const {
     handleAdminRegister
 } = require('../controller/adminAuth.controller');
 
-const { verifyToken } = require("../middleware/verifyToken");
+const { verifyAdmin } = require("../middleware/verifyToken");
 
 router.post("/register",handleAdminRegister);
-router.post("/login",handleAdminLogin);
+router.post("/login",verifyAdmin,handleAdminLogin);
 
 module.exports = router;

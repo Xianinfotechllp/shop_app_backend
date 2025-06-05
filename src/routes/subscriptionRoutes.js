@@ -9,6 +9,6 @@ const { verifyToken } = require("../middleware/verifyToken");
 
 router.post("/start-subscription", verifyToken, handleStartSubscription);
 router.get("/status", verifyToken, handleCheckSubscriptionStatus);
-router.get("/get-all-subscription", verifyToken, handleGetAllSubscriptions);
+router.get("/getallsubscription", verifyToken, handleGetAllSubscriptions);
 
 module.exports = router;
