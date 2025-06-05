@@ -106,6 +106,40 @@ const handleUpdateUser = async (req, res) => {
   }
 };
 
+// DELETE - Delete user by ID
+const deleteUserController = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Invalid user ID",
+    });
+  }
+
+  try {
+    const deletedUser = await userModel.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "User deleted successfully",
+      user: deletedUser,
+    });
+  } catch (err) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to delete user",
+    });
+  }
+};
+
+
 // shanky | GET user's location (state, pincode)
 // GET - Fetch user location
 const getUserLocation = async (req, res) => {
@@ -191,6 +225,7 @@ module.exports = {
   handleGetAllUsers,
   handleGetUserById,
   handleUpdateUser,
+  deleteUserController,
   getUserLocation,
   updateUserLocation,
   getUserDetailsController,
