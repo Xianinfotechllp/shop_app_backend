@@ -8,6 +8,6 @@ const {
 const { verifyAdmin } = require("../middleware/verifyToken");
 
 router.post("/register",handleAdminRegister);
-router.post("/login",verifyAdmin,handleAdminLogin);
+router.post("/login",handleAdminLogin);
 
 module.exports = router;
