@@ -41,7 +41,7 @@ const productSchema = mongoose.Schema(
     deliveryOption: {
       type: String,
       // enum: ["Home Delivery", "Store Pickup"],
-      required: true,
+      // required: true,
     },
     adminId: { type: String, required: false }, // Ensure it's a string
     userId: { type: String, required: false },
