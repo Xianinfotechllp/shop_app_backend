@@ -15,7 +15,7 @@ const productValidationSchema = Joi.object({
   productImage: Joi.string().optional(),
   sold: Joi.number().optional(),
   estimatedTime: Joi.string().optional(),
-  deliveryOption: Joi.string().required(),
+  deliveryOption: Joi.string().optional(),
   productType: Joi.string().required(),
 
   // Added userId and adminId validation
