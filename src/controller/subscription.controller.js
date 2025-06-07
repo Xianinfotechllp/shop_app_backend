@@ -2,25 +2,24 @@ const mongoose = require("mongoose");
 const moment = require("moment-timezone");
 const User = require("../models/user");
 const Subscription = require("../models/subscription");
-const { info, error, debug } = require("../middleware/logger"); 
+const { info, error, debug } = require("../middleware/logger");
+
 
 async function handleStartSubscription(req, res) {
-  const { plan } = req.body;
+  const durationDays = Number(req.body.durationDays);
+  const amount = Number(req.body.amount);
   const userId = req.user.id;
 
-  debug(`Subscription start attempt - User: ${userId}, Plan: ${plan}`);
-
-  if (!["30_days", "365_days"].includes(plan)) {
-    info(`Invalid plan type requested: ${plan} by user ${userId}`);
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid plan type" });
+  if (isNaN(durationDays) || isNaN(amount)) {
+    return res.status(400).json({
+      success: false,
+      message: "durationDays and amount must be valid numbers",
+    });
   }
 
-  try {
-    const duration = plan === "30_days" ? 30 : 365;
-    const now = moment().tz("Asia/Kolkata").toDate();
+  const now = moment().tz("Asia/Kolkata").toDate();
 
+  try {
     let existingSubscription = await Subscription.findOne({
       userId,
       status: "active",
@@ -28,12 +27,12 @@ async function handleStartSubscription(req, res) {
 
     if (existingSubscription) {
       const newEndDate = moment(existingSubscription.endDate)
-        .add(duration, "days")
+        .add(durationDays, "days")
         .toDate();
       existingSubscription.endDate = newEndDate;
+      existingSubscription.amount += amount;
       await existingSubscription.save();
-      
-      info(`Subscription extended - User: ${userId}, Plan: ${plan}, New end date: ${moment(newEndDate).format()}`);
+
       return res.status(200).json({
         success: true,
         message: "Subscription extended",
@@ -42,11 +41,12 @@ async function handleStartSubscription(req, res) {
     }
 
     const startDate = now;
-    const endDate = moment(now).add(duration, "days").toDate();
+    const endDate = moment(now).add(durationDays, "days").toDate();
 
     const newSubscription = await Subscription.create({
       userId,
-      plan,
+      durationDays,
+      amount,
       startDate,
       endDate,
       status: "active",
@@ -57,19 +57,20 @@ async function handleStartSubscription(req, res) {
       subscriptionId: newSubscription._id,
     });
 
-    info(`New subscription activated - User: ${userId}, Plan: ${plan}, ID: ${newSubscription._id}`);
     return res.status(200).json({
       success: true,
       message: "Subscription activated",
       subscription: newSubscription,
     });
   } catch (err) {
-    error(`Failed to start subscription - User: ${userId}, Error: ${err.message}`);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal Server Error" });
+    console.error("Failed to start subscription:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 }
+
 
 async function handleCheckSubscriptionStatus(req, res) {
   const userId = req.user.id;
