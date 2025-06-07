@@ -1,5 +1,6 @@
 // index.js
 //trying to fix the merge github issue
+
 const express = require("express");
 const router = express.Router();
 const userAuthRoutes = require("./userAuthRoutes");
