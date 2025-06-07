@@ -30,6 +30,7 @@ async function getAllPlans(req, res) {
   }
 }
 
+
 // @desc   Get a specific subscription plan by ID
 // @route  GET /api/subscription-plans/getplanbyid/:id
 // @access Public/Admin
