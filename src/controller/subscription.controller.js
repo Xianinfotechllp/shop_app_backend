@@ -168,8 +168,39 @@ async function handleGetAllSubscriptions(req, res) {
   }
 }
 
+const handleSubscriptionByUser = async (req, res) => {
+  const { userId } = req.params;
+  console.log("User ID:", userId);
+
+  try {
+    const subscription = await Subscription.find({ userId }).populate({
+      path: "userId",
+      model: "user", // 👈 explicitly reference the User model
+      select: "name mobileNumber state place locality pincode subscriptionId",
+    });
+
+    if (!subscription || subscription.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No subscription found for this user." });
+    }
+
+    res.status(200).json({ success: true, subscription });
+  } catch (error) {
+    console.error("Error fetching subscription by user:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error" });
+  }
+};
+
+
+
 module.exports = {
   handleStartSubscription,
   handleCheckSubscriptionStatus,
   handleGetAllSubscriptions,
+  handleSubscriptionByUser
 };
+
+
