@@ -16,7 +16,7 @@ const categoryRoutes = require("./categoryRoutes");
 const deliveryAddressRoutes = require("./deliveryAddressRoutes")
 const favoriteRoutes = require("./favoriteRoutes");
 const adminDashRoutes = require("./adminDashRoutes");
-const subscriptionPlanRoutes = require("./SubscriptionPlanRoutes");
+const subscriptionPlanRoutes = require("./subscriptionPlanRoutes");
 
 router.use("/auth/user", userAuthRoutes);
 router.use("/auth/admin", adminAuthRoutes);
