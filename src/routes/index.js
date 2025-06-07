@@ -25,6 +25,8 @@ router.use("/api/subscription", subscriptionRoutes);
 router.use("/api/dashboard", dashboardRoutes);
 router.use("/api/delivery", deliveryAddressRoutes);
 router.use("/api/favorite",favoriteRoutes);
+
+//for admin dashboard 
 router.use("/adminDashboard",adminDashRoutes);
 
 //shanky
