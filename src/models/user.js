@@ -5,6 +5,11 @@ const userSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  email: {                      // ✅ New field
+    type: String,
+    required: true,
+    unique: true,
+  },
   mobileNumber: {
     type: Number,
     required: true,
@@ -18,10 +23,10 @@ const userSchema = mongoose.Schema({
     required: true,
   },
   place: {
-    type: String,      
+    type: String,
   },
   locality: {
-    type: String,      
+    type: String,
     required: true,
   },
   pincode: {
@@ -40,10 +45,18 @@ const userSchema = mongoose.Schema({
   },
   favorites: [
     {
-      type: mongoose.Schema.Types.ObjectId,    //  new fields for saving the users favorite products 
+      type: mongoose.Schema.Types.ObjectId, // User's favorite products
       ref: "products",
     },
   ],
+  otp: {                      // ✅ New field
+    type: String,
+    default: null,
+  },
+  otpExpiry: {                // ✅ New field
+    type: Date,
+    default: null,
+  },
 });
 
 const userModel = mongoose.model("user", userSchema);
