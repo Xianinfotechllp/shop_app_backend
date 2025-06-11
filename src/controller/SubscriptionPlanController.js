@@ -2,17 +2,16 @@ const SubscriptionPlan = require("../models/SubscriptionPlan");
 const userModel = require("../models/user"); // For accessing user FCM tokens
 const admin = require("../config/admin"); // Firebase Admin SDK (initialized in admin.js)
 
-
 // @desc   Create a new subscription plan
-// also we will send fcm notification to all user when the new subscription plan is created in this controller 
-
 // @route  POST /api/subscription-plans/createplan
 // @access Admin
+// When a new subscription plan is created, an FCM notification will be sent to all users with saved tokens
+
 async function createPlan(req, res) {
   try {
     const { name, durationDays, amount, description } = req.body;
 
-    // Step 1: Create the subscription plan in the database
+    // Step 1: Save the new subscription plan to the database
     const plan = await SubscriptionPlan.create({
       name: name.trim(),
       durationDays,
@@ -20,35 +19,47 @@ async function createPlan(req, res) {
       description: (description || "").trim(),
     });
 
-    // Step 2: Find users who have at least one FCM token saved
+    // Step 2: Find users with at least one FCM token saved
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
 
-    // Step 3: Extract all tokens from all users into one array
+    // Step 3: Gather all tokens into a single array
     const allTokens = users.flatMap(user => user.fcmTokens);
 
-    // Step 4: If tokens are found, send a notification to all
+    // Step 4: If tokens exist, prepare and send notification
     if (allTokens.length > 0) {
       const message = {
         notification: {
           title: "New Subscription Plan Available",
           body: `Check out our new plan: ${plan.name} for ₹${plan.amount}\n\nPlan Details: ${plan.description}`,
         },
-        tokens: allTokens, // List of device tokens to send notification to
+        tokens: allTokens,
       };
 
-      // Step 5: Use Firebase Admin SDK to send the notification
-      const response = await admin.messaging().sendMulticast(message);
-      console.log("FCM notifications sent successfully to", response.successCount, "users");
+      // Step 5: Send notification using Firebase Admin SDK
+      const response = await admin.messaging().sendEachForMulticast(message);
+
+      console.log("✅ FCM Notification Summary:");
+      console.log("Total Sent:", allTokens.length);
+      console.log("Success Count:", response.successCount);
+      console.log("Failure Count:", response.failureCount);
+
+      // Optional: log failed tokens for debugging
+      response.responses.forEach((resp, index) => {
+        if (!resp.success) {
+          console.log(`❌ Failed to send to token[${index}]: ${resp.error.message}`);
+        }
+      });
     } else {
-      console.log("No FCM tokens found. Notification not sent.");
+      console.log("ℹ️ No FCM tokens found, notification not sent.");
     }
 
     return res.status(201).json({ success: true, plan });
   } catch (err) {
-    console.error("Error in createPlan:", err);
+    console.error(" Error in createPlan:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 }
+
 
 
 // @desc   Get all subscription plans
