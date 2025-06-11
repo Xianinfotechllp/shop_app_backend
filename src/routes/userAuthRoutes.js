@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { handleUserRegistration, handleUserLogin,sendOtpController,verifyOtpController,resetPasswordController,} = require("../controller/userAuth.controller");
+const { handleUserRegistration, handleUserLogin,sendOtpController,verifyOtpController,resetPasswordController,
+   saveFcmTokenController} = require("../controller/userAuth.controller");
 
 //- index.js route - 
 // /auth/user
@@ -13,6 +14,7 @@ router.post("/send-otp", sendOtpController);
 router.post("/verify-otp", verifyOtpController);
 // Route to reset password
 router.post("/reset-password", resetPasswordController);
-
+// ✅ New route to save FCM token
+router.post("/save-fcm-token",saveFcmTokenController);
 
 module.exports = router;

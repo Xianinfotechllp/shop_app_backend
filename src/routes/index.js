@@ -32,8 +32,6 @@ router.use("/api/favorite",favoriteRoutes);
 router.use("/api/subscription-plans",subscriptionPlanRoutes);
 //for admin dashboard 
 router.use("/adminDashboard",adminDashRoutes);
-
-
 //shanky
 router.use("/api/user", userRoutes);
 

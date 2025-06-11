@@ -253,6 +253,34 @@ const resetPasswordController = async (req, res) => {
 //--------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------
 
+// - here in this controller we are saving a firebase fcm messaging token 
+// in user model so we can send notification to that specific user device
+
+// route - /auth/user/save-fcm-token
+const saveFcmTokenController = async (req, res) => {
+  const { fcmToken, userId } = req.body; 
+  
+
+  if (!fcmToken) {
+    return res.status(400).json({ message: "FCM token is required" });
+  }
+
+  try {
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Avoid duplicate token entries
+    if (!user.fcmTokens.includes(fcmToken)) {
+      user.fcmTokens.push(fcmToken);
+      await user.save();
+    }
+
+    res.status(200).json({ message: "FCM token saved successfully" });
+  } catch (error) {
+    console.error("Error saving FCM token:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 module.exports = { 
   handleUserRegistration, 
@@ -260,4 +288,5 @@ module.exports = {
   sendOtpController,
   verifyOtpController,
   resetPasswordController, 
+  saveFcmTokenController
 };

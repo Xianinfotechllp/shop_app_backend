@@ -1,22 +1,56 @@
 const SubscriptionPlan = require("../models/SubscriptionPlan");
+const userModel = require("../models/user"); // For accessing user FCM tokens
+const admin = require("firebase-admin"); // Firebase Admin SDK (initialized in admin.js)
+
 
 // @desc   Create a new subscription plan
+// also we will send fcm notification to all user when the new subscription plan is created in this controller 
+
 // @route  POST /api/subscription-plans/createplan
 // @access Admin
 async function createPlan(req, res) {
   try {
     const { name, durationDays, amount, description } = req.body;
+
+    // Step 1: Create the subscription plan in the database
     const plan = await SubscriptionPlan.create({
       name: name.trim(),
       durationDays,
       amount,
       description: (description || "").trim(),
     });
+
+    // Step 2: Find users who have at least one FCM token saved
+    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+
+    // Step 3: Extract all tokens from all users into one array
+    const allTokens = users.flatMap(user => user.fcmTokens);
+
+    // Step 4: If tokens are found, send a notification to all
+    if (allTokens.length > 0) {
+      const message = {
+        notification: {
+          title: "New Subscription Plan Available",
+          body: `Check out our new plan: ${plan.name} for ₹${plan.amount}\n\nPlan Details: ${plan.description}`,
+        },
+        tokens: allTokens, // List of device tokens to send notification to
+      };
+
+      // Step 5: Use Firebase Admin SDK to send the notification
+      const response = await admin.messaging().sendMulticast(message);
+      
+      console.log("FCM notifications sent successfully to", response.successCount, "users");
+    } else {
+      console.log("No FCM tokens found. Notification not sent.");
+    }
+
     return res.status(201).json({ success: true, plan });
   } catch (err) {
+    console.error("Error in createPlan:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 }
+
 
 // @desc   Get all subscription plans
 // @route  GET /api/subscription-plans/getallplan

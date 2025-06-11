@@ -5,7 +5,7 @@ const userSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  email: {                      // ✅ New field
+  email: {                     
     type: String,
     required: true,
     unique: true,
@@ -45,19 +45,22 @@ const userSchema = mongoose.Schema({
   },
   favorites: [
     {
-      type: mongoose.Schema.Types.ObjectId, // User's favorite products
+      type: mongoose.Schema.Types.ObjectId,
       ref: "products",
     },
   ],
-  otp: {                      // ✅ New field
+  otp: {
     type: String,
     default: null,
   },
-  otpExpiry: {                // ✅ New field
+  otpExpiry: {
     type: Date,
     default: null,
   },
-});
+  fcmTokens: [{type: String,}],     // ✅ Added field for FCM tokens can save multiple device tokens of single user in an array
+
+});               
+
 
 const userModel = mongoose.model("user", userSchema);
 
