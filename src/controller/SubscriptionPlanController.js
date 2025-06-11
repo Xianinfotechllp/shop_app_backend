@@ -38,7 +38,6 @@ async function createPlan(req, res) {
 
       // Step 5: Use Firebase Admin SDK to send the notification
       const response = await admin.messaging().sendMulticast(message);
-      
       console.log("FCM notifications sent successfully to", response.successCount, "users");
     } else {
       console.log("No FCM tokens found. Notification not sent.");
