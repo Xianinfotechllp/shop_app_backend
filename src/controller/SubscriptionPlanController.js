@@ -1,6 +1,6 @@
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const userModel = require("../models/user"); // For accessing user FCM tokens
-const admin = require("firebase-admin"); // Firebase Admin SDK (initialized in admin.js)
+const admin = require("../config/admin"); // Firebase Admin SDK (initialized in admin.js)
 
 
 // @desc   Create a new subscription plan
