@@ -3,7 +3,7 @@ const moment = require("moment-timezone");
 const User = require("../models/user");
 const Subscription = require("../models/subscription");
 const { info, error, debug } = require("../middleware/logger");
-
+const admin = require("../config/admin");
 
 async function handleStartSubscription(req, res) {
   const durationDays = Number(req.body.durationDays);
@@ -25,42 +25,68 @@ async function handleStartSubscription(req, res) {
       status: "active",
     });
 
+    let responseMessage = "";
+    let subscription;
+
     if (existingSubscription) {
       const newEndDate = moment(existingSubscription.endDate)
         .add(durationDays, "days")
         .toDate();
       existingSubscription.endDate = newEndDate;
       existingSubscription.amount += amount;
+      existingSubscription.durationDays += durationDays; // ✅ update durationDays
       await existingSubscription.save();
 
-      return res.status(200).json({
-        success: true,
-        message: "Subscription extended",
-        subscription: existingSubscription,
+      responseMessage = "Subscription extended";
+      subscription = existingSubscription;
+    } else {
+      const startDate = now;
+      const endDate = moment(now).add(durationDays, "days").toDate();
+
+      const newSubscription = await Subscription.create({
+        userId,
+        durationDays,
+        amount,
+        startDate,
+        endDate,
+        status: "active",
+        paymentStatus: "paid",
       });
+
+      await User.findByIdAndUpdate(userId, {
+        subscriptionId: newSubscription._id,
+      });
+
+      responseMessage = "Subscription activated";
+      subscription = newSubscription;
     }
 
-    const startDate = now;
-    const endDate = moment(now).add(durationDays, "days").toDate();
+    // ✅ FCM Notification - Only to the user who started the subscription
+    const user = await User.findById(userId);
+    const tokens = user?.fcmTokens || [];
 
-    const newSubscription = await Subscription.create({
-      userId,
-      durationDays,
-      amount,
-      startDate,
-      endDate,
-      status: "active",
-      paymentStatus: "paid",
-    });
+    if (tokens.length > 0) {
+      const message = {
+        notification: {
+          title: "✅ Subscription Active!",
+          body: `Your subscription is now active for ${durationDays} days.`,
+        },
+        tokens,
+      };
 
-    await User.findByIdAndUpdate(userId, {
-      subscriptionId: newSubscription._id,
-    });
+      const fcmResponse = await admin.messaging().sendMulticast(message);
+      console.log("✅ FCM Notification Summary:");
+      console.log("Total Sent:", tokens.length);
+      console.log("Success Count:", fcmResponse.successCount);
+      console.log("Failure Count:", fcmResponse.failureCount);
+    } else {
+      console.log("No FCM tokens found for this user. Notification not sent.");
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Subscription activated",
-      subscription: newSubscription,
+      message: responseMessage,
+      subscription,
     });
   } catch (err) {
     console.error("Failed to start subscription:", err.message);

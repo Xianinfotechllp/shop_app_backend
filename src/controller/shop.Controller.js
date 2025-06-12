@@ -5,20 +5,26 @@ const fs = require("fs");
 const { info, error, debug } = require("../middleware/logger");
 const { StatusCodes } = require("http-status-codes");
 const userModel = require("../models/user");
+const admin = require("../config/admin");
 
-// ✅ Create Shop
+
+// ✅ Create Shop 
+// and with that also sending the fcm notification to all user about new shop , whenever a new shop is created
 const createShop = async (req, res) => {
   try {
     const { shopName, category, sellerType, state, locality, place, pinCode, userId } = req.body;
 
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
+    // Upload image to Cloudinary
     const result = await cloudinary.v2.uploader.upload(req.file.path, {
       folder: "shops",
     });
 
+    // Remove local file
     fs.unlinkSync(req.file.path);
 
+    // Create shop in DB
     const newShop = new Shop({
       shopName,
       category: Array.isArray(category) ? category : [category],
@@ -32,9 +38,42 @@ const createShop = async (req, res) => {
     });
 
     await newShop.save();
-    res.status(201).json({ message: "Shop created successfully", shop: newShop });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    // 🔔 Prepare & send FCM notification
+    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+    const allTokens = users.flatMap((user) => user.fcmTokens);
+
+    let fcmResponse = null;
+
+    if (allTokens.length > 0) {
+      const message = {
+        notification: {
+          title: "🛍️ New Shop Alert!",
+          body: `Check out new shop "${shopName}".Explore now!`,
+        },
+        tokens: allTokens,
+      };
+
+      fcmResponse = await admin.messaging().sendEachForMulticast(message);
+
+      info(`✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`);
+    } else {
+      info("ℹ️ No FCM tokens found. Notification not sent.");
+    }
+
+    // 🟢 Return response
+    res.status(201).json({
+      message: "Shop created successfully",
+      shop: newShop,
+      fcm: {
+        successCount: fcmResponse?.successCount || 0,
+        failureCount: fcmResponse?.failureCount || 0,
+      },
+    });
+
+  } catch (err) {
+    error("❌ Error in createShop:", err.message);
+    res.status(500).json({ message: err.message });
   }
 };
 

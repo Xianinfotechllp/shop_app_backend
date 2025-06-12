@@ -6,22 +6,17 @@ const { info, error, debug } = require("../middleware/logger");
 const Shop = require("../models/storeModel");
 const User = require("../models/user");    
 const Product = require("../models/product");
-
+const admin = require("../config/admin");
 
 const handleCreateProduct = async (req, res) => {
   const { adminId, userId } = req.body;
 
-  // Ensure either adminId or userId is provided
   if (!adminId && !userId) {
-    return res
-      .status(400)
-      .json({ message: "Either adminId or userId is required" });
+    return res.status(400).json({ message: "Either adminId or userId is required" });
   }
 
   try {
-    console.log(
-      `File received for product: ${req.file?.originalname || "no file"}`
-    );
+    console.log(`File received for product: ${req.file?.originalname || "no file"}`);
 
     const productData = {
       ...req.body,
@@ -29,17 +24,51 @@ const handleCreateProduct = async (req, res) => {
       userId: userId || undefined,
     };
 
-    const newProduct = await productService.createProduct(
-      productData,
-      req.file
-    );
+    const newProduct = await productService.createProduct(productData, req.file);
 
-    console.log(
-      `Product created successfully - ID: ${newProduct._id}, Name: ${newProduct.name}`
-    );
-    res.status(201).json({ message: "Product created", product: newProduct });
+    console.log(`Product created successfully - ID: ${newProduct._id}, Name: ${newProduct.name}`);
+
+    // Log body fields
+    info(`Request body fields: [${Object.keys(req.body).join(", ")}]`);
+
+    // Step 1: Get users with FCM tokens
+    const users = await User.find({ fcmTokens: { $exists: true, $ne: [] } });
+    const allTokens = users.flatMap(user => user.fcmTokens);
+
+    // Step 2: Send notification
+    let fcmSummary = {};
+    if (allTokens.length > 0) {
+      const message = {
+        notification: {
+          title: "🆕 New Product Added!",
+          body: `Introducing "${newProduct.name}". Check it out now!`,
+        },
+        tokens: allTokens,
+      };
+
+      const response = await admin.messaging().sendEachForMulticast(message);
+      fcmSummary = {
+        totalSent: allTokens.length,
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+      };
+
+      info("✅ FCM Notification Summary:");
+      info(`Total Sent: ${fcmSummary.totalSent}`);
+      info(`Success Count: ${fcmSummary.successCount}`);
+      info(`Failure Count: ${fcmSummary.failureCount}`);
+    } else {
+      info("No FCM tokens found. Notification not sent.");
+    }
+
+    res.status(201).json({ 
+      message: "Product created", 
+      product: newProduct, 
+      notification: fcmSummary 
+    });
+
   } catch ({ statusCode = 500, message }) {
-    console.error(`Product creation failed - Error: ${message}`);
+    error(`Product creation failed - Error: ${message}`);
     res.status(statusCode).json({ message });
   }
 };
