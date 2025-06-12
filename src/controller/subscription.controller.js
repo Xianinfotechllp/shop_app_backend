@@ -74,7 +74,7 @@ async function handleStartSubscription(req, res) {
         tokens,
       };
 
-      const fcmResponse = await admin.messaging().sendMulticast(message);
+      const fcmResponse = await admin.messaging().sendEachForMulticast(message);
       console.log("✅ FCM Notification Summary:");
       console.log("Total Sent:", tokens.length);
       console.log("Success Count:", fcmResponse.successCount);
