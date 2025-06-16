@@ -81,7 +81,7 @@ const createShop = async (req, res) => {
     await notificationDoc.save();
 
     // ------------------------ ✅ Send Final Response ------------------------
-    
+
     res.status(StatusCodes.CREATED).json({
       message: "Shop created successfully",
       shop: newShop,
@@ -127,7 +127,7 @@ const getShopById = async (req, res) => {
 const getShopByUser = async (req, res) => {
   try {
     const userId = req.user.id;
-    debug(`Fetching shops - UserID: ${userId}`);
+    // debug(`Fetching shops - UserID: ${userId}`);
 
     const user = await userModel.findById(userId);
     console.log(user);
