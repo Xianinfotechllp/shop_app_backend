@@ -17,6 +17,7 @@ const deliveryAddressRoutes = require("./deliveryAddressRoutes")
 const favoriteRoutes = require("./favoriteRoutes");
 const adminDashRoutes = require("./adminDashRoutes");
 const subscriptionPlanRoutes = require("./subscriptionPlanRoutes");
+const notificaitonRoutes = require("./notificationroutes")
 
 router.use("/auth/user", userAuthRoutes);
 router.use("/auth/admin", adminAuthRoutes);
@@ -30,6 +31,7 @@ router.use("/api/dashboard", dashboardRoutes);
 router.use("/api/delivery", deliveryAddressRoutes);
 router.use("/api/favorite",favoriteRoutes);
 router.use("/api/subscription-plans",subscriptionPlanRoutes);
+router.use("/api/notification",notificaitonRoutes)
 //for admin dashboard 
 router.use("/adminDashboard",adminDashRoutes);
 //shanky

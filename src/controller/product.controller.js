@@ -4,11 +4,16 @@ const { StatusCodes } = require("http-status-codes");
 const productService = require("../service/product.service");
 const { info, error, debug } = require("../middleware/logger");
 const Shop = require("../models/storeModel");
-const User = require("../models/user");    
+const User = require("../models/user");
 const Product = require("../models/product");
 const admin = require("../config/admin");
+const Notification = require("../models/notificationModel");
 
+// =================================================================================================
+// ====================================== 🟢 CREATE PRODUCT =========================================
+// =================================================================================================
 const handleCreateProduct = async (req, res) => {
+  // ===================================== 🔍 INPUT VALIDATION =====================================
   const { adminId, userId } = req.body;
 
   if (!adminId && !userId) {
@@ -16,26 +21,28 @@ const handleCreateProduct = async (req, res) => {
   }
 
   try {
+    // ===================================== 📂 FILE LOGGING ========================================
     console.log(`File received for product: ${req.file?.originalname || "no file"}`);
 
+    // ===================================== 🛠️ PRODUCT DATA PREP ==================================
     const productData = {
       ...req.body,
       adminId: adminId || undefined,
       userId: userId || undefined,
     };
 
+    // ===================================== 📦 CREATE PRODUCT ======================================
     const newProduct = await productService.createProduct(productData, req.file);
-
     console.log(`Product created successfully - ID: ${newProduct._id}, Name: ${newProduct.name}`);
 
-    // Log body fields
+    // ===================================== 📝 LOG BODY FIELDS =====================================
     info(`Request body fields: [${Object.keys(req.body).join(", ")}]`);
 
-    // Step 1: Get users with FCM tokens
+    // ===================================== 📱 GET FCM USERS =======================================
     const users = await User.find({ fcmTokens: { $exists: true, $ne: [] } });
     const allTokens = users.flatMap(user => user.fcmTokens);
 
-    // Step 2: Send notification
+    // ===================================== 🔔 SEND FCM NOTIFICATION ================================
     let fcmSummary = {};
     if (allTokens.length > 0) {
       const message = {
@@ -53,21 +60,40 @@ const handleCreateProduct = async (req, res) => {
         failureCount: response.failureCount,
       };
 
-      info("✅ FCM Notification Summary:");
-      info(`Total Sent: ${fcmSummary.totalSent}`);
-      info(`Success Count: ${fcmSummary.successCount}`);
-      info(`Failure Count: ${fcmSummary.failureCount}`);
+      // info("✅ FCM Notification Summary:");
+      // info(`Total Sent: ${fcmSummary.totalSent}`);
+      // info(`Success Count: ${fcmSummary.successCount}`);
+      // info(`Failure Count: ${fcmSummary.failureCount}`);
     } else {
       info("No FCM tokens found. Notification not sent.");
     }
 
-    res.status(201).json({ 
-      message: "Product created", 
-      product: newProduct, 
-      notification: fcmSummary 
+    // ===================================== 💾 SAVE NOTIFICATION TO DB ==============================
+    const notificationDoc = new Notification({
+      title: "🆕 New Product Added!",
+      body: `Introducing "${newProduct.name}". Check it out now!`,
+      type: "new_product",
+      recipients: users.map((user) => ({
+        userId: user._id,
+        isRead: false,
+      })),
+      data: {
+        productId: newProduct._id,
+        productName: newProduct.name,
+      },
+    });
+
+    await notificationDoc.save();
+
+    // ===================================== ✅ SEND FINAL RESPONSE ==================================
+    res.status(201).json({
+      message: "Product created",
+      product: newProduct,
+      notification: fcmSummary,
     });
 
   } catch ({ statusCode = 500, message }) {
+    // ===================================== ❌ ERROR HANDLING ======================================
     error(`Product creation failed - Error: ${message}`);
     res.status(statusCode).json({ message });
   }

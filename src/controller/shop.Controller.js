@@ -2,29 +2,29 @@ const Shop = require("../models/storeModel");
 const ApiError = require("../utils/ApiError");
 const cloudinary = require("cloudinary");
 const fs = require("fs");
-const { info, error, debug } = require("../middleware/logger");
+const { info, error } = require("../middleware/logger");
 const { StatusCodes } = require("http-status-codes");
 const userModel = require("../models/user");
+const Notification = require("../models/notificationModel"); // ✅ Add this
 const admin = require("../config/admin");
 
-
 // ✅ Create Shop 
-// and with that also sending the fcm notification to all user about new shop , whenever a new shop is created
 const createShop = async (req, res) => {
   try {
     const { shopName, category, sellerType, state, locality, place, pinCode, userId } = req.body;
 
+    // ------------------------ 📤 Upload Image ------------------------
+
     if (!req.file) throw new ApiError(400, "No image uploaded");
 
-    // Upload image to Cloudinary
     const result = await cloudinary.v2.uploader.upload(req.file.path, {
       folder: "shops",
     });
 
-    // Remove local file
-    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(req.file.path); // remove local file
 
-    // Create shop in DB
+    // ------------------------ 🏪 Create Shop in DB ------------------------
+
     const newShop = new Shop({
       shopName,
       category: Array.isArray(category) ? category : [category],
@@ -39,7 +39,8 @@ const createShop = async (req, res) => {
 
     await newShop.save();
 
-    // 🔔 Prepare & send FCM notification
+    // ------------------------ 🔔 Send FCM Notification ------------------------
+
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
     const allTokens = users.flatMap((user) => user.fcmTokens);
 
@@ -49,7 +50,7 @@ const createShop = async (req, res) => {
       const message = {
         notification: {
           title: "🛍️ New Shop Alert!",
-          body: `Check out new shop "${shopName}".Explore now!`,
+          body: `Check out new shop "${shopName}". Explore now!`,
         },
         tokens: allTokens,
       };
@@ -61,8 +62,27 @@ const createShop = async (req, res) => {
       info("ℹ️ No FCM tokens found. Notification not sent.");
     }
 
-    // 🟢 Return response
-    res.status(201).json({
+    // ------------------------ 💾 Save Notification in DB ------------------------
+
+    const notificationDoc = new Notification({
+      title: "🛍️ New Shop Alert!",
+      body: `Check out new shop "${shopName}". Explore now!`,
+      type: "new_shop",
+      recipients: users.map((user) => ({
+        userId: user._id,
+        isRead: false,
+      })),
+      data: {
+        shopId: newShop._id,
+        shopName: shopName,
+      },
+    });
+
+    await notificationDoc.save();
+
+    // ------------------------ ✅ Send Final Response ------------------------
+    
+    res.status(StatusCodes.CREATED).json({
       message: "Shop created successfully",
       shop: newShop,
       fcm: {
@@ -73,9 +93,10 @@ const createShop = async (req, res) => {
 
   } catch (err) {
     error("❌ Error in createShop:", err.message);
-    res.status(500).json({ message: err.message });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
   }
 };
+
 
 
 // ✅ Get All Shops

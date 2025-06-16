@@ -1,17 +1,21 @@
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const userModel = require("../models/user"); // For accessing user FCM tokens
 const admin = require("../config/admin"); // Firebase Admin SDK (initialized in admin.js)
+const Notification = require("../models/notificationModel"); // ✅ Notification model
 
 // @desc   Create a new subscription plan
 // @route  POST /api/subscription-plans/createplan
 // @access Admin
 // When a new subscription plan is created, an FCM notification will be sent to all users with saved tokens
 
+// =================================================================================================
+// ============================= 🟢 CREATE SUBSCRIPTION PLAN & NOTIFY USERS ==========================
+// =================================================================================================
 async function createPlan(req, res) {
   try {
     const { name, durationDays, amount, description } = req.body;
 
-    // Step 1: Save the new subscription plan to the database
+    // ===================================== 💾 SAVE PLAN TO DATABASE ================================
     const plan = await SubscriptionPlan.create({
       name: name.trim(),
       durationDays,
@@ -19,13 +23,13 @@ async function createPlan(req, res) {
       description: (description || "").trim(),
     });
 
-    // Step 2: Find users with at least one FCM token saved
+    // ===================================== 📱 GET USERS WITH FCM TOKENS =============================
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
 
-    // Step 3: Gather all tokens into a single array
+    // ===================================== 📡 EXTRACT ALL TOKENS =====================================
     const allTokens = users.flatMap(user => user.fcmTokens);
 
-    // Step 4: If tokens exist, prepare and send notification
+    // ===================================== 🔔 SEND FCM NOTIFICATION IF TOKENS FOUND ==================
     if (allTokens.length > 0) {
       const message = {
         notification: {
@@ -35,15 +39,13 @@ async function createPlan(req, res) {
         tokens: allTokens,
       };
 
-      // Step 5: Send notification using Firebase Admin SDK
       const response = await admin.messaging().sendEachForMulticast(message);
 
-      console.log("✅ FCM Notification Summary:");
-      console.log("Total Sent:", allTokens.length);
-      console.log("Success Count:", response.successCount);
-      console.log("Failure Count:", response.failureCount);
+      // console.log("✅ FCM Notification Summary:");
+      // console.log("Total Sent:", allTokens.length);
+      // console.log("Success Count:", response.successCount);
+      // console.log("Failure Count:", response.failureCount);
 
-      // Optional: log failed tokens for debugging
       response.responses.forEach((resp, index) => {
         if (!resp.success) {
           console.log(`❌ Failed to send to token[${index}]: ${resp.error.message}`);
@@ -53,8 +55,29 @@ async function createPlan(req, res) {
       console.log("ℹ️ No FCM tokens found, notification not sent.");
     }
 
+    // ===================================== 🗂️ SAVE NOTIFICATION TO DATABASE ==========================
+    const notificationDoc = new Notification({
+      title: "New Subscription Plan Available",
+      body: `Check out our new plan: ${plan.name} for ₹${plan.amount}`,
+      type: "new_plan",
+      recipients: users.map(user => ({
+        userId: user._id,
+        isRead: false,
+      })),
+      data: {
+        planId: plan._id,
+        planName: plan.name,
+        amount: plan.amount,
+      },
+    });
+
+    await notificationDoc.save();
+
+    // ===================================== ✅ SEND SUCCESS RESPONSE ==================================
     return res.status(201).json({ success: true, plan });
+
   } catch (err) {
+    // ===================================== ❌ ERROR HANDLING ========================================
     console.error(" Error in createPlan:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
