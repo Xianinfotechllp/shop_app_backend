@@ -35,17 +35,13 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Fetch notifications where this user has unread entry
     const notifications = await Notification.find({
-      recipients: {
-        $elemMatch: { userId, isRead: false }
-      }
-    }).select("-recipients") // Exclude full recipients array
-      .lean();
+      recipients: { $elemMatch: { userId, isRead: false } }
+    }).lean(); // lean = plain JS object
 
-    // Attach only the matching recipient data
     const userNotifications = notifications.map((notif) => {
       const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
+
       return {
         _id: notif._id,
         title: notif.title,
@@ -53,13 +49,19 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
         type: notif.type,
         data: notif.data,
         createdAt: notif.createdAt,
-        isRead: recipientData?.isRead || false
+        recipient: {
+          userId: recipientData?.userId,
+          isRead: recipientData?.isRead || false
+        }
       };
     });
 
     res.status(200).json(userNotifications);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch notifications", error: err.message });
+    res.status(500).json({
+      message: "Failed to fetch notifications",
+      error: err.message
+    });
   }
 };
 
