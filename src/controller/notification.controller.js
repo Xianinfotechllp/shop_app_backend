@@ -1,6 +1,7 @@
 const Notification = require("../models/notificationModel");
 
-// ✅ Get all unread notifications for a specific user
+// ✅ Get all unread notifications and all recipient name for a specific user
+// sends only read = false notification , read = true notifications will not be sent
 const getUserNotifications = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -24,9 +25,44 @@ const getUserNotifications = async (req, res) => {
   }
 };
 
-module.exports = {
-  getUserNotifications,
+
+// in this instead of sending all the recipient data we will send only that specific userid recipient of params 
+// so by this the response will become less heave and easy to transfer and read
+// we will use this one instead of using the previous one which is sending the whole recipient name with the all notificaiotion
+// in this it will send all notifications but in the response recipient we will only have that specific user_id from params
+// sends only read = false notification , read = true notifications will not be sent 
+const getSpecificRecipientandallNotifications = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Fetch notifications where this user has unread entry
+    const notifications = await Notification.find({
+      recipients: {
+        $elemMatch: { userId, isRead: false }
+      }
+    }).select("-recipients") // Exclude full recipients array
+      .lean();
+
+    // Attach only the matching recipient data
+    const userNotifications = notifications.map((notif) => {
+      const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
+      return {
+        _id: notif._id,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        data: notif.data,
+        createdAt: notif.createdAt,
+        isRead: recipientData?.isRead || false
+      };
+    });
+
+    res.status(200).json(userNotifications);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch notifications", error: err.message });
+  }
 };
+
 
 
 
@@ -62,7 +98,9 @@ const markNotificationRead = async (req, res) => {
   }
 };
 
-// ✅ delete request - Delete a notification only for a specific user
+// delete request - Delete a notification only for a specific user
+//The deleteNotificationForUser controller removes a specific user 
+// from the recipients array of a specific notification document.
 const deleteNotificationForUser = async (req, res) => {
   try {
     const { notificationId } = req.params;
@@ -92,8 +130,30 @@ const deleteNotificationForUser = async (req, res) => {
   }
 };
 
+
+const deleteNotification = async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+
+    const deleted = await Notification.findByIdAndDelete(notificationId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    res.status(200).json({ message: "Notification deleted successfully" });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to delete notification",
+      error: err.message,
+    });
+  }
+};
+
 module.exports = {
   getUserNotifications,
   markNotificationRead,
   deleteNotificationForUser,
+  getSpecificRecipientandallNotifications,
+  deleteNotification
 };
