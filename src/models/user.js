@@ -2,37 +2,37 @@ const mongoose = require("mongoose");
 
 const userSchema = mongoose.Schema({
   name: {
-    type: String,
-    required: true,
-  },
-  email: {                     
-    type: String,
-    required: true,
-    unique: true,
-  },
-  mobileNumber: {
+     type: String,
+      required: true
+     },
+  email: {
+     type: String,
+      required: true,
+       unique: true 
+      },
+  mobileNumber: { 
     type: Number,
-    required: true,
-  },
+     required: true
+     },
   password: {
+     type: String,
+      required: true
+     },
+  state: { 
     type: String,
-    required: true,
-  },
-  state: {
-    type: String,
-    required: true,
-  },
-  place: {
-    type: String,
-  },
+     required: true
+     },
+  place: { 
+    type: String
+   },
   locality: {
-    type: String,
-    required: true,
-  },
+     type: String,
+      required: true
+     },
   pincode: {
-    type: String,
-    required: true,
-  },
+     type: String,
+      required: true
+     },
   role: {
     type: String,
     default: "user",
@@ -43,25 +43,26 @@ const userSchema = mongoose.Schema({
     ref: "Subscription",
     default: null,
   },
-  favorites: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "products",
-    },
-  ],
-  otp: {
+  favorites: [{
+     type: mongoose.Schema.Types.ObjectId,
+      ref: "products" 
+    }],
+  otp: { 
     type: String,
-    default: null,
-  },
+     default: null
+     },
   otpExpiry: {
-    type: Date,
-    default: null,
-  },
-  fcmTokens: [{type: String,}],     // ✅ Added field for FCM tokens can save multiple device tokens of single user in an array
-
-});               
-
+     type: Date,
+      default: null
+     },
+  isVerified: {
+     type: Boolean,   // we will mark this as true when user while registering will provide the correct otp and get registered if he dont 
+    default: false    // if he dont 
+    },
+  fcmTokens: [{ 
+    type: String
+   }],
+});
 
 const userModel = mongoose.model("user", userSchema);
-
 module.exports = userModel;
