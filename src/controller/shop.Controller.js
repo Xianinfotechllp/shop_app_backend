@@ -13,15 +13,17 @@ const createShop = async (req, res) => {
   try {
     const { shopName, category, sellerType, state, locality, place, pinCode, userId, email, mobileNumber, landlineNumber } = req.body;
 
-    // ------------------------ 📤 Upload Image ------------------------
+    // ------------------------ 📤 Optional Image Upload ------------------------
 
-    if (!req.file) throw new ApiError(400, "No image uploaded");
+    let imageUrl = null;
 
-    const result = await cloudinary.v2.uploader.upload(req.file.path, {
-      folder: "shops",
-    });
-
-    fs.unlinkSync(req.file.path); // remove local file
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(req.file.path, {
+        folder: "shops",
+      });
+      imageUrl = result.secure_url;
+      fs.unlinkSync(req.file.path); // remove local file
+    }
 
     // ------------------------ 🏪 Create Shop in DB ------------------------
 
@@ -33,7 +35,7 @@ const createShop = async (req, res) => {
       locality,
       place,
       pinCode,
-      headerImage: result.secure_url,
+      headerImage: imageUrl,
       owner: userId,
       email,
       mobileNumber,
@@ -95,10 +97,11 @@ const createShop = async (req, res) => {
     });
 
   } catch (err) {
-    error("❌ Error in createShop:", err.message);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
+    error("❌ Error in createShop:", err); // full error for better debugging
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message || "Server error", error: err });
   }
 };
+
 
 
 
