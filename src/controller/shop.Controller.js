@@ -216,6 +216,39 @@ const deleteShop = async (req, res) => {
   }
 };
 
+// finding shops based on user location that matches shop location on homescreen
+
+const getNearbyShops = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find user by ID
+    const user = await userModel.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Find shops matching user's location (case-insensitive)
+    const matchingShops = await Shop.find({
+      state: new RegExp(`^${user.state}$`, "i"),
+      // place: new RegExp(`^${user.place}$`, "i"),     // Uncomment if needed
+      // locality: new RegExp(`^${user.locality}$`, "i"),
+      pinCode: user.pincode,
+    });
+
+    if (matchingShops.length === 0) {
+      return res.status(200).json({ message: "No shops found in your area", shops: [] });
+    }
+
+    return res.status(200).json({ shops: matchingShops });
+  } catch (err) {
+    console.error("Error in getNearbyShops:", err);
+    return res.status(500).json({ message: "Server error", error: err });
+  }
+};
+
+
+
+
+
 module.exports = {
   createShop,
   getShops,
@@ -223,5 +256,6 @@ module.exports = {
   updateShop,
   deleteShop,
   getShopByUser,
+  getNearbyShops,
 };
 

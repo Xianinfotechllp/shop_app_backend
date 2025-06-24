@@ -5,22 +5,22 @@ const validator = (schema) =>(payload)=>
 
 
 const productValidationSchema = Joi.object({
-  shop: Joi.string().required(),
-  name: Joi.string().required(),
+  shop: Joi.string().optional(),
+  name: Joi.string().optional(),
   description: Joi.string().optional(),
-  price: Joi.number().required(),
-  category: Joi.string().required(), 
+  price: Joi.number().optional(),
+  category: Joi.string().optional(), 
   // category: Joi.array().items(Joi.string()).optional(),  // Accepting array of strings
-  quantity: Joi.number().required().min(1),
+  quantity: Joi.number().optional().min(1),
   productImage: Joi.string().optional(),
   sold: Joi.number().optional(),
   estimatedTime: Joi.string().optional(),
   deliveryOption: Joi.string().optional(),
-  productType: Joi.string().required(),
+  productType: Joi.string().optional(),
 
   // Added userId and adminId validation
   userId: Joi.string().optional().allow(null),      // Accepts string or null
-  adminId: Joi.string().optional().allow(null),      // Accepts string or null
+  adminId: Joi.string().optional().allow(null),     // Accepts string or null
 
   // Add favorite field validation
   favorite: Joi.boolean().optional() 

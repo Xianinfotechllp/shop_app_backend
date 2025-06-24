@@ -5,22 +5,22 @@ const productSchema = mongoose.Schema(
     shop: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shop",
-      required: true,
+      // required: true,
     },
     name: {
       type: String,
-      required: true,
+      // required: true,
     },
     description: {
       type: String,
     },
     price: {
       type: Number,
-      required: true,
+      // required: true,
     },
     quantity: {
       type: Number,
-      required: true,
+      // required: true,
     },
     productImage: {
       type: String,
@@ -36,7 +36,7 @@ const productSchema = mongoose.Schema(
     productType: {
       type: String,
       // enum: ["kg", "litre", "gram", "piece", "pack", "dozen"],
-      required: true,
+      // required: true,
     },
     deliveryOption: {
       type: String,
@@ -52,7 +52,7 @@ const productSchema = mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,
+      // required: true,
     }
 
   },
