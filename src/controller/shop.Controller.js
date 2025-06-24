@@ -11,7 +11,7 @@ const admin = require("../config/admin");
 // ✅ Create Shop 
 const createShop = async (req, res) => {
   try {
-    const { shopName, category, sellerType, state, locality, place, pinCode, userId } = req.body;
+    const { shopName, category, sellerType, state, locality, place, pinCode, userId, email, mobileNumber, landlineNumber } = req.body;
 
     // ------------------------ 📤 Upload Image ------------------------
 
@@ -35,6 +35,9 @@ const createShop = async (req, res) => {
       pinCode,
       headerImage: result.secure_url,
       owner: userId,
+      email,
+      mobileNumber,
+      landlineNumber,
     });
 
     await newShop.save();
@@ -96,6 +99,7 @@ const createShop = async (req, res) => {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
   }
 };
+
 
 
 
