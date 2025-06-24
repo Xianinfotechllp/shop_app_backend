@@ -8,6 +8,7 @@ const { verifyToken } = require("../middleware/verifyToken");
 router.post("/", upload.single("headerImage"), shopController.createShop); // Create shop
 router.get("/", shopController.getShops); // Get all shops
 router.get("/nearby/:userId", shopController.getNearbyShops);
+router.get("/search/:term/:userId", shopController.searchShopController);
 router.get("/by-user", verifyToken, shopController.getShopByUser);
 router.get("/:id", shopController.getShopById); // Get shop by ID
 router.put("/:id",verifyToken,upload.single("headerImage"),shopController.updateShop); // Update shop by ID

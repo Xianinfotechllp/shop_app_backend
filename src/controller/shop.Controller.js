@@ -174,7 +174,18 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shopName, category, sellerType, state, locality, place, pinCode } = req.body;
+    const { 
+      shopName, 
+      category, 
+      sellerType, 
+      state, 
+      locality, 
+      place, 
+      pinCode,
+      email,
+      mobileNumber,
+      landlineNumber
+    } = req.body;
 
     const shop = await Shop.findById(id);
     if (!shop) throw new ApiError(404, "Shop not found");
@@ -187,6 +198,9 @@ const updateShop = async (req, res) => {
       locality,
       place,
       pinCode,
+      email,
+      mobileNumber,
+      landlineNumber,
       owner: req.user?.id,
     };
 
@@ -252,7 +266,69 @@ const getNearbyShops = async (req, res) => {
   }
 };
 
+// @desc Search shops by name or category (case-insensitive)
+// @route GET /api/shops/search/:term
 
+// search bar for shop with sorting , if shop location and user location match
+//  then in response those matched shop will show first in response before unmatched location shop
+const searchShopController = async (req, res) => {
+  try {
+    const { term, userId } = req.params;
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: "User not found",
+      });
+    }
+
+    // 🔍 Case-insensitive search regex
+    const regex = new RegExp(term, 'i');
+
+    // 🔎 Find all matching shops
+    const shops = await Shop.find({
+      $or: [
+        { shopName: { $regex: regex } },
+        { category: { $in: [regex] } }
+      ]
+    });
+
+    // ✅ Sort shops: those matching user's location (state & pincode) first
+    const sortedShops = shops.sort((a, b) => {
+      const aMatch = a.state?.toLowerCase() === user.state.toLowerCase() && a.pinCode === user.pincode;
+      const bMatch = b.state?.toLowerCase() === user.state.toLowerCase() && b.pinCode === user.pincode;
+
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+
+    // 1. shops.sort((a, b) => {...})
+    //This sorts the array shops.
+    // Each a and b is a shop object being compared.
+    // We define custom sorting by comparing how well each shop matches the user's location.
+
+//     2. if (aMatch && !bMatch) return -1;
+// Means: If Shop A matches and Shop B doesn't, then Shop A should come before B in the sorted list.
+
+//     3. if (!aMatch && bMatch) return 1;
+// Means: If Shop B matches and Shop A doesn't, then Shop B should come before A.
+
+//     4. return 0;
+// If both shops match or neither match, no change in their order.
+
+    res.status(StatusCodes.OK).json({
+      message: `${sortedShops.length} shops found`,
+      shops: sortedShops,
+    });
+
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: "Error searching for shops",
+      error: error.message,
+    });
+  }
+};
 
 
 
@@ -264,5 +340,6 @@ module.exports = {
   deleteShop,
   getShopByUser,
   getNearbyShops,
+  searchShopController
 };
 
