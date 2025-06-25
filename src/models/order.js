@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const orderSchema = mongoose.Schema(
+const orderSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -14,18 +14,19 @@ const orderSchema = mongoose.Schema(
           ref: "products",
           required: true,
         },
-        name: String, 
-        price: Number, 
-        quantity: {
-          type: Number,
-          required: true,
-          min: 1,
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
+        totalAmount: { type: Number, required: true },
+        shop: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Shop",
         },
-      },
+      }
     ],
-    totalAmount: {
+    totalCartAmount: {
       type: Number,
-      required: true,
+      required: true
     },
     status: {
       type: String,
@@ -38,15 +39,12 @@ const orderSchema = mongoose.Schema(
       default: "pending",
     },
     address: {
-      street: String,
-      city: String,
-      state: String,
-      pincode: String,
-    },
+      type: Object,
+      required: true
+    }
   },
   { timestamps: true }
 );
 
 const orderModel = mongoose.model("orders", orderSchema);
-
 module.exports = orderModel;
