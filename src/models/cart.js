@@ -4,14 +4,14 @@ const cartSchema = mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user", 
+      ref: "user",
       required: true,
     },
     items: [
       {
         productId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref:"products", 
+          ref: "products",
           required: true,
         },
         quantity: {
@@ -19,13 +19,26 @@ const cartSchema = mongoose.Schema(
           required: true,
           min: 1,
         },
-        totalAmount: {
+        productPrice: {
+          // Individual price of product (without quantity)
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        totalProductPrice: {
+          // price * quantity
           type: Number,
           required: true,
           min: 1,
         },
       },
     ],
+    totalCartPrice: {
+      // Sum of all totalProductPrice
+      type: Number,
+      required: true,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

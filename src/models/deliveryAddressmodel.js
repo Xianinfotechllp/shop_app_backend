@@ -11,7 +11,7 @@ const DeliveryAddressSchema = new mongoose.Schema({
     {
       countryName: { type: String, required: true },
       phoneNumber: { type: String, required: true },
-      houseNo: { type: String, required: true },
+      houseNo: { type: String},
       area: { type: String, required: true },
       landmark: { type: String },
       pincode: { type: String, required: true },
