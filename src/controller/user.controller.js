@@ -4,6 +4,7 @@ const { updateUser } = require("../service/user.service");
 const { StatusCodes } = require("http-status-codes");
 const { info, error, debug } = require("../middleware/logger"); // Update path as needed
 
+
 async function handleGetAllUsers(req, res) {
   const requesterId = req.user?.id || 'unknown';
 
@@ -221,6 +222,39 @@ const getUserDetailsController = async (req, res) => {
   }
 };
 
+// controller to search user - on admin pannel
+ const AdminsearchUserController = async (req, res) => {
+  try {
+    const keyword = req.params.keyword || "";
+
+    const conditions = [
+      { name: { $regex: keyword, $options: "i" } },
+      { email: { $regex: keyword, $options: "i" } }
+    ];
+
+    // If keyword is a valid number, include mobileNumber match
+    if (!isNaN(keyword)) {
+      conditions.push({ mobileNumber: Number(keyword) });
+    }
+
+    const users = await userModel.find({
+      $or: conditions
+    });
+
+    res.status(200).json({
+      success: true,
+      total: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error("Error in searchUserController:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while searching users",
+    });
+  }
+};
+
 module.exports = {
   handleGetAllUsers,
   handleGetUserById,
@@ -229,4 +263,5 @@ module.exports = {
   getUserLocation,
   updateUserLocation,
   getUserDetailsController,
+  AdminsearchUserController
 };

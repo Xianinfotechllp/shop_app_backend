@@ -99,7 +99,8 @@ const handleCreateProduct = async (req, res) => {
   }
 };
 
-const handleGetAllProducts = async (req, res) => {
+// this is for admin pannel only - cz here we send the banned shop products too but in user module we dont want to send the banned shop products
+const AdminGetAllProducts = async (req, res) => {
   const requesterId = req.user?.id || "unknown";
   const queryParams = req.query;
 
@@ -120,6 +121,47 @@ const handleGetAllProducts = async (req, res) => {
     return res.status(200).json({
       message: "Products fetched successfully",
       products,
+      pagination,
+    });
+  } catch (err) {
+    error(
+      `Failed to fetch products - User: ${requesterId}, Error: ${err.message}`
+    );
+    return res.status(err.statusCode || 500).json({
+      message: err.message || "Internal Server Error",
+    });
+  }
+};
+
+// for used module cz here we will remove the product who belongs to the shop that is banned by the admin 
+// | cz admin can see all type of shop and products but user can see only that are not banned
+const handleGetAllProducts = async (req, res) => {
+  const requesterId = req.user?.id || "unknown";
+  const queryParams = req.query;
+
+  debug(
+    `Get all products request - User: ${requesterId}, Filters: ${JSON.stringify(
+      queryParams
+    )}`
+  );
+
+  try {
+    const { products, pagination } = await productService.getAllProducts(
+      queryParams
+    );
+
+    // ✅ Filter out products whose shop is banned
+    const filteredProducts = products.filter(
+      (product) => product.shop && product.shop.isBanned === false
+    );
+
+    info(
+      `Products fetched successfully - Count: ${filteredProducts.length}, Page: ${pagination.currentPage}, User: ${requesterId}`
+    );
+
+    return res.status(200).json({
+      message: "Products fetched successfully",
+      products: filteredProducts,
       pagination,
     });
   } catch (err) {
@@ -297,17 +339,16 @@ async function getNearbyProductsController(req, res) {
   try {
     const { userId } = req.params;
 
-    //  Load the user
+    // Load the user
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    //  Find shops matching all 4 location fields  / made the search of location incase sensitive
+    // Find shops matching location and not banned
     const matchingShops = await Shop.find({
-  state:    new RegExp(`^${user.state}$`, 'i'),    // case-insensitive
-  // place:    new RegExp(`^${user.place}$`, 'i'),    
-  // locality: new RegExp(`^${user.locality}$`, 'i'),
-  pinCode:  user.pincode,
-}).select("_id");
+      state: new RegExp(`^${user.state}$`, 'i'),
+      pinCode: user.pincode,
+      isBanned: false // ✅ exclude banned shops
+    }).select("_id");
 
     const shopIds = matchingShops.map((s) => s._id);
     if (!shopIds.length) {
@@ -316,12 +357,11 @@ async function getNearbyProductsController(req, res) {
         .json({ message: "No shops in your area", products: [] });
     }
 
-    //  Fetch products belonging to those shops
+    // Fetch products from allowed shops
     const products = await Product.find({ shop: { $in: shopIds } })
       .populate("shop", "shopName state place locality pinCode")
       .exec();
 
-    //  Return the filtered products
     return res.status(200).json({ products });
   } catch (error) {
     console.error(error);
@@ -350,16 +390,22 @@ const searchProducts = async (req, res) => {
     // 🔍 If both productName and location are provided
     if (validProductName && validLocation) {
       const shopRegex = new RegExp(location, "i");
+
       const matchingShops = await shopModel.find({
+        isBanned: false, // ✅ Only include non-banned shops
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
       }, "_id");
 
       if (matchingShops.length === 0) {
-        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "No shops found for the given location." });
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "No shops found for the given location.",
+        });
       }
 
       const shopIds = matchingShops.map(shop => shop._id);
       const nameRegex = new RegExp(productName, "i");
+
       products = await productModel.find({
         name: { $regex: nameRegex },
         shop: { $in: shopIds },
@@ -371,23 +417,35 @@ const searchProducts = async (req, res) => {
     // 🔍 If only productName is provided
     if (validProductName) {
       const nameRegex = new RegExp(productName, "i");
-      products = await productModel.find({ name: { $regex: nameRegex } });
+
+      const all = await productModel.find({ name: { $regex: nameRegex } })
+        .populate("shop", "isBanned");
+
+      // ✅ Filter products from non-banned shops only
+      products = all.filter(p => p.shop && !p.shop.isBanned);
+
       return res.status(StatusCodes.OK).json({ success: true, data: products });
     }
 
     // 🔍 If only location is provided
     if (validLocation) {
       const shopRegex = new RegExp(location, "i");
+
       const matchingShops = await shopModel.find({
+        isBanned: false, // ✅ Only include non-banned shops
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
       }, "_id");
 
       if (matchingShops.length === 0) {
-        return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "No shops found for the given location." });
+        return res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          message: "No shops found for the given location.",
+        });
       }
 
       const shopIds = matchingShops.map(shop => shop._id);
       products = await productModel.find({ shop: { $in: shopIds } });
+
       return res.status(StatusCodes.OK).json({ success: true, data: products });
     }
 
@@ -404,6 +462,7 @@ const searchProducts = async (req, res) => {
 
 module.exports = {
   handleCreateProduct,
+  AdminGetAllProducts,
   handleGetAllProducts,
   handleGetProductById,
   handleUpdateProductById,
@@ -420,45 +479,4 @@ module.exports = {
 
 
 
-
-// //testing pincodeee producttt controllerrr
-// const handleGetHomeProducts = async(req, res)=> {
-//   try {
-//     // 1. get user ID from JWT middleware
-//     const userId = req.user.id;    //"67ed4d16df3f88efc6a24745"  checked it through this id cz idh user token
-
-//     // 2. fetch user to read pincode
-//     const user = await User.findById(userId).select("pincode");
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     const userPincode = user.pincode;
-
-//     // 3. find shops whose pinCode equals user.pincode
-//     const shops = await Shop.find({ pinCode: userPincode }).select("_id");
-//     if (shops.length === 0) {
-//       return res
-//         .status(200)
-//         .json({ products: [], message: "No shops available in your area" });
-//     }
-
-//     const shopIds = shops.map((shop) => shop._id);
-
-//     // 4. find products whose shop is in that list
-//     const products = await Product.find({ shop: { $in: shopIds } })
-//       .populate({
-//         path: "shop",
-//         select: "shopName state place pinCode",
-//       })
-//       .lean();
-
-//     // 5. return the filtered products
-//     return res.status(200).json({ products });
-//   } catch (err) {
-//     console.error("getHomeProducts error:", err);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// }
-//testing github branch
 

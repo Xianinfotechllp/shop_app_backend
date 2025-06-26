@@ -75,7 +75,7 @@ const placeOrderController = async (req, res) => {
         <h3>👤 Customer Details</h3>
         <p><strong>Name:</strong> ${user.name}</p>
         <p><strong>Email:</strong> ${user.email}</p>
-        <p><strong>Mobile:</strong> ${user.mobileNumber}</p>
+        <p><strong>Mobile:</strong> ${selectedAddress.phoneNumber}</p>
 
         <h3>📦 Delivery Address</h3>
         <p>

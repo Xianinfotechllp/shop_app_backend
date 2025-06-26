@@ -102,12 +102,20 @@ const createShop = async (req, res) => {
   }
 };
 
+// get all shops for user module not for admin pannel
 
-
-
-
-// ✅ Get All Shops
 const getShops = async (req, res) => {
+  try {
+    const shops = await Shop.find({ isBanned: false }); // ✅ Exclude banned shops
+    res.status(200).json(shops);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// ✅ admin pannel Get All Shops
+const AdminGetAllShops = async (req, res) => {
   try {
     const shops = await Shop.find();
     res.status(200).json(shops);
@@ -247,12 +255,11 @@ const getNearbyShops = async (req, res) => {
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Find shops matching user's location (case-insensitive)
+    // Find shops matching user's location and not banned
     const matchingShops = await Shop.find({
       state: new RegExp(`^${user.state}$`, "i"),
-      // place: new RegExp(`^${user.place}$`, "i"),     // Uncomment if needed
-      // locality: new RegExp(`^${user.locality}$`, "i"),
       pinCode: user.pincode,
+      isBanned: false, // ✅ Only include non-banned shops
     });
 
     if (matchingShops.length === 0) {
@@ -287,6 +294,7 @@ const searchShopController = async (req, res) => {
 
     // 🔎 Find all matching shops
     const shops = await Shop.find({
+       isBanned: false,                       // it will not include the banned shop in the search 
       $or: [
         { shopName: { $regex: regex } },
         { category: { $in: [regex] } }
@@ -330,16 +338,58 @@ const searchShopController = async (req, res) => {
   }
 };
 
+// admin pannel search shop controller is for the admin pannel few things are different here from previou one
+const AdminsearchShopController = async (req, res) => {
+  const { keyword } = req.params;
+
+  try {
+    const regex = new RegExp(keyword, 'i'); // case-insensitive match
+    const shops = await Shop.find({
+      $or: [
+        { shopName: { $regex: regex } },
+        { email: { $regex: regex } },
+        { mobileNumber: { $regex: regex } },
+      ],
+    });
+
+    res.status(200).json({ success: true, shops });
+  } catch (error) {
+    console.error('Shop search error:', error);
+    res.status(500).json({ success: false, message: 'Search failed' });
+  }
+};
+
+
+// controller to change ban/active status of a shop from admin pannel
+const AdminChangeShopBanStatus = async (req, res) => {
+  try {
+    const { shopId } = req.params;
+
+    const shop = await Shop.findById(shopId);
+    if (!shop) return res.status(404).json({ message: "Shop not found" });
+
+    shop.isBanned = !shop.isBanned;
+    await shop.save();
+
+    res.status(200).json({ message: "Shop ban status updated", isBanned: shop.isBanned });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 
 module.exports = {
   createShop,
   getShops,
+  AdminGetAllShops,
   getShopById,
   updateShop,
   deleteShop,
   getShopByUser,
   getNearbyShops,
-  searchShopController
+  searchShopController,
+  AdminsearchShopController,
+  AdminChangeShopBanStatus
 };
 

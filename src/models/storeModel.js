@@ -47,6 +47,10 @@ const shopSchema = mongoose.Schema(
     mobileNumber: {
       type: String,
     },
+    isBanned: {
+     type: Boolean,         // admin can ban any shop which is fraudant and then this shop will not be seen by "user" but admin can see it 
+    default: false,
+  },
     headerImage: {
       type: String,
     },
