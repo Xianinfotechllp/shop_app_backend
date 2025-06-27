@@ -1,10 +1,13 @@
 const Order = require("../models/order");
 const User = require("../models/user");
+const Shop = require("../models/storeModel");
 const Product = require("../models/product");
 const DeliveryAddress = require("../models/deliveryAddressmodel");
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
+
+// nodemailer send email function we have not made in seperate file , we did in function in every file where we are sending email from api..
 const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -22,6 +25,7 @@ const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
   });
 };
 
+// order creation is done here when user press buy | can buy either single product or whole cart of multiple products from same api...
 const placeOrderController = async (req, res) => {
   try {
     const { items, addressId } = req.body;
@@ -129,8 +133,107 @@ const placeOrderController = async (req, res) => {
   }
 };
 
+// get api for the order summary | about the orders user has given and when he will click on them we will send the product details from another api..
+
+const handleGetUserOrdersSummary = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const orders = await Order.find({ userId })
+      .sort({ createdAt: -1 }) // latest orders first
+      .lean();
+
+    const summarizedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const productNames = await Promise.all(
+          order.items.map(async (item) => {
+            const product = await Product.findById(item.productId).select("name");
+            return product?.name || "Product Deleted";
+          })
+        );
+
+        return {
+          orderId: order._id,
+          userId: order.userId,
+          createdAt: order.createdAt,
+          products: productNames,
+          totalCartAmount: order.totalCartAmount,
+        };
+      })
+    );
+
+    return res.status(200).json({
+      message: "User orders fetched successfully",
+      userId: userId,
+      orders: summarizedOrders,
+    });
+  } catch (err) {
+    console.error("Error fetching user orders summary:", err.message);
+    return res.status(500).json({
+      message: "Failed to fetch user orders",
+      error: err.message,
+    });
+  }
+};
+
+// in this controller we will show the whole order detail when we click on order - so we can see the whole product details
+
+const UserOrderProductsDetails = async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    const order = await Order.findById(orderId).lean();
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const detailedItems = await Promise.all(
+      order.items.map(async (item) => {
+        const product = await Product.findById(item.productId).lean();
+        const shop = product ? await Shop.findById(product.shop).lean() : null;
+
+        return {
+          productName: product?.name || "Product Deleted",
+          productImage: product?.productImage || "N/A",
+          productPrice: product?.price !== undefined ? product.price : "N/A",
+          quantityBought: item.quantity || "N/A",
+          // 💡 Total = price × quantity (if both exist)
+          totalPrice:
+            product?.price !== undefined && item.quantity !== undefined
+              ? product.price * item.quantity
+              : "N/A",
+          shopName: shop?.shopName || "Shop Deleted",
+          shopEmail: shop?.email || "N/A",
+          shopMobile: shop?.mobileNumber || "N/A",
+        };
+      })
+    );
+
+    const filteredItems = detailedItems.filter(Boolean);
+
+    return res.status(200).json({
+      orderId: order._id,
+      userId: order.userId,
+      totalCartAmount: order.totalCartAmount || "N/A",
+      createdAt: order.createdAt,
+      address: order.address,
+      products: filteredItems,
+    });
+  } catch (err) {
+    console.error("Error fetching order details:", err.message);
+    return res.status(500).json({
+      message: "Failed to fetch order details",
+      error: err.message,
+    });
+  }
+};
+
+
+
 module.exports = {
   placeOrderController,
+  handleGetUserOrdersSummary,
+  UserOrderProductsDetails
 };
 
 

@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { placeOrderController } = require("../controller/order.controller");
+const { placeOrderController,handleGetUserOrdersSummary ,UserOrderProductsDetails} = require("../controller/order.controller");
 const { verifyToken } = require("../middleware/verifyToken");
 
 //place your order on this route
 router.post("/place", verifyToken, placeOrderController);
+// GET user-specific whole order summay with date
+router.get("/user-orders-summary/:userId", handleGetUserOrdersSummary);
+// specific order- product detials..
+router.get("/order-products-details/:orderId", UserOrderProductsDetails);
 
 module.exports = router;
 

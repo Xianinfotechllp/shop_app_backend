@@ -13,6 +13,7 @@ async function handleStartSubscription(req, res) {
   const durationDays = Number(req.body.durationDays);
   const amount = Number(req.body.amount);
   const userId = req.user.id;
+  const subscriptionPlanId = req.body.subscriptionPlanId;
 
   if (isNaN(durationDays) || isNaN(amount)) {
     return res.status(400).json({
@@ -52,6 +53,7 @@ async function handleStartSubscription(req, res) {
 
       const newSubscription = await Subscription.create({
         userId,
+        subscriptionPlanId,   // added subscription plan id now we can access the subscription plan details too 
         durationDays,
         amount,
         startDate,
@@ -173,11 +175,12 @@ async function handleCheckSubscriptionStatus(req, res) {
   }
 }
 
+// in this we send the all subscription with the subscription - plan details also (rn we are using this controller in the admin pannel to see subscription details )
 async function handleGetAllSubscriptions(req, res) {
   const adminId = req.user.id;
-  
+
   debug(`Admin requesting all subscriptions - Admin: ${adminId}`);
-  
+
   if (req.user.role !== "admin") {
     info(`Unauthorized access attempt to subscriptions list - User: ${adminId}, Role: ${req.user.role}`);
     return res.status(403).json({
@@ -188,14 +191,15 @@ async function handleGetAllSubscriptions(req, res) {
 
   try {
     const subscriptions = await Subscription.find();
+
     info(`Admin retrieved all subscriptions - Admin: ${adminId}, Count: ${subscriptions.length}`);
 
     const formattedSubscriptions = await Promise.all(
       subscriptions.map(async (subscription) => {
         const sub = subscription.toObject();
 
+        // ⬇️ Get user details
         const user = await mongoose.model("user").findById(sub.userId);
-
         if (user) {
           sub.userDetails = {
             name: user.name,
@@ -203,6 +207,22 @@ async function handleGetAllSubscriptions(req, res) {
           };
         }
 
+        // ⬇️ Get subscription plan details
+        if (sub.subscriptionPlanId) {
+          const plan = await mongoose.model("SubscriptionPlan").findById(sub.subscriptionPlanId);
+          if (plan) {
+            sub.subscriptionPlanDetails = {
+              name: plan.name,
+              durationDays: plan.durationDays,
+              amount: plan.amount,
+              description: plan.description,
+            };
+          }
+        } else {
+          sub.subscriptionPlanDetails = "N/A";
+        }
+
+        // Format dates
         sub.startDate = moment(sub.startDate).tz("Asia/Kolkata").format();
         sub.endDate = moment(sub.endDate).tz("Asia/Kolkata").format();
 
@@ -223,31 +243,57 @@ async function handleGetAllSubscriptions(req, res) {
   }
 }
 
+// with specific user that subscription he bought we send subscription detials and subscription plan details also 
 const handleSubscriptionByUser = async (req, res) => {
   const { userId } = req.params;
   console.log("User ID:", userId);
 
   try {
-    const subscription = await Subscription.find({ userId }).populate({
-      path: "userId",
-      model: "user", // 👈 explicitly reference the User model
-      select: "name mobileNumber state place locality pincode subscriptionId",
-    });
+    const subscriptions = await Subscription.find({ userId })
+      .populate({
+        path: "userId",
+        model: "user",
+        select: "name mobileNumber state place locality pincode subscriptionId",
+      });
 
-    if (!subscription || subscription.length === 0) {
+    if (!subscriptions || subscriptions.length === 0) {
       return res
         .status(404)
         .json({ message: "No subscription found for this user." });
     }
 
-    res.status(200).json({ success: true, subscription });
+    const formatted = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const obj = sub.toObject();
+
+        // ⬇️ Add subscription plan details if available
+        if (obj.subscriptionPlanId) {
+          const plan = await mongoose.model("SubscriptionPlan").findById(obj.subscriptionPlanId);
+          if (plan) {
+            obj.subscriptionPlanDetails = {
+              name: plan.name,
+              durationDays: plan.durationDays,
+              amount: plan.amount,
+              description: plan.description,
+            };
+          } else {
+            obj.subscriptionPlanDetails = "N/A";
+          }
+        } else {
+          obj.subscriptionPlanDetails = "N/A";
+        }
+
+        return obj;
+      })
+    );
+
+    res.status(200).json({ success: true, subscription: formatted });
   } catch (error) {
     console.error("Error fetching subscription by user:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 
@@ -258,4 +304,16 @@ module.exports = {
   handleSubscriptionByUser
 };
 
+
+// route for postman test start subscription
+
+// api/subscription/start-subscription
+
+// postman testing payload for start subscription 
+
+// {
+//   "durationDays": 30,
+//   "amount": 299,
+//   "subscriptionPlanId": "6659ec2fcde435f7d27c4a01"
+// }
 

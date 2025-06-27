@@ -2,12 +2,23 @@ const mongoose = require("mongoose");
 const moment = require("moment-timezone");
 
 const subscriptionSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
+  // 🔗 Link to the full subscription plan (correct key name)
+  subscriptionPlanId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "SubscriptionPlan", // model name remains correct
+    required: true,
+  },
 
   durationDays: {
     type: Number,
     required: true,
-  }, // e.g., 23, 45
+  },
 
   amount: {
     type: Number,
@@ -20,7 +31,10 @@ const subscriptionSchema = new mongoose.Schema({
     default: () => moment().tz("Asia/Kolkata").toDate(),
   },
 
-  endDate: { type: Date, required: true },
+  endDate: {
+    type: Date,
+    required: true,
+  },
 
   status: {
     type: String,
@@ -36,5 +50,4 @@ const subscriptionSchema = new mongoose.Schema({
 });
 
 const Subscription = mongoose.model("Subscription", subscriptionSchema);
-
 module.exports = Subscription;
