@@ -9,6 +9,7 @@ const admin = require("../config/admin");
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
 // =================================================================================================
+// remember if same user buy the same plan again it will add up days and amount in the previous plan he bought first it will not show it as different different seperate subscription of that same user  
 async function handleStartSubscription(req, res) {
   const durationDays = Number(req.body.durationDays);
   const amount = Number(req.body.amount);

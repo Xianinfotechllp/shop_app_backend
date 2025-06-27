@@ -46,7 +46,7 @@ const placeOrderController = async (req, res) => {
         return {
           productId: product._id,
           name: product.name,
-          price: product.price,
+          price: product.price,   // --> need to remove this and take amount from req.body so we can put product price either in gram or direct whatever the user want instead of fix
           quantity: item.quantity,
           totalAmount: product.price * item.quantity,
           shop: product.shop,
@@ -139,16 +139,14 @@ const handleGetUserOrdersSummary = async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    const orders = await Order.find({ userId })
-      .sort({ createdAt: -1 }) // latest orders first
-      .lean();
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 }).lean();
 
     const summarizedOrders = await Promise.all(
       orders.map(async (order) => {
         const productNames = await Promise.all(
           order.items.map(async (item) => {
             const product = await Product.findById(item.productId).select("name");
-            return product?.name || "Product Deleted";
+            return { name: product?.name || "Product Deleted" }; // wrapped in object
           })
         );
 
@@ -156,7 +154,7 @@ const handleGetUserOrdersSummary = async (req, res) => {
           orderId: order._id,
           userId: order.userId,
           createdAt: order.createdAt,
-          products: productNames,
+          products: productNames, // now array of { name: "..." }
           totalCartAmount: order.totalCartAmount,
         };
       })
@@ -164,7 +162,7 @@ const handleGetUserOrdersSummary = async (req, res) => {
 
     return res.status(200).json({
       message: "User orders fetched successfully",
-      userId: userId,
+      userId,
       orders: summarizedOrders,
     });
   } catch (err) {
@@ -175,6 +173,7 @@ const handleGetUserOrdersSummary = async (req, res) => {
     });
   }
 };
+
 
 // in this controller we will show the whole order detail when we click on order - so we can see the whole product details
 
@@ -195,7 +194,7 @@ const UserOrderProductsDetails = async (req, res) => {
         return {
           productName: product?.name || "Product Deleted",
           productImage: product?.productImage || "N/A",
-          productPrice: product?.price !== undefined ? product.price : "N/A",
+          productPrice: product?.price !== undefined ? product.price : "N/A", // --> have to put product price from the order product price not this cz this is static in order it is calculated according to the grams based purchase also so it is sent and calculated by the frontend guy not in backend
           quantityBought: item.quantity || "N/A",
           // 💡 Total = price × quantity (if both exist)
           totalPrice:
