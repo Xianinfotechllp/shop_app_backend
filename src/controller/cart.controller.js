@@ -26,7 +26,8 @@ const addToCartController = async (req, res) => {
           productId,
           quantity,
           productPrice,
-          totalProductPrice
+          totalProductPrice,
+          isInCart: true // ✅ Mark as in cart
         }],
         totalCartPrice: totalProductPrice
       });
@@ -38,7 +39,13 @@ const addToCartController = async (req, res) => {
           message: 'This product is already in your cart. Please check your cart.'
         });
       } else {
-        cart.items.push({ productId, quantity, productPrice, totalProductPrice });
+        cart.items.push({
+          productId,
+          quantity,
+          productPrice,
+          totalProductPrice,
+          isInCart: true // ✅ Mark as in cart
+        });
         cart.totalCartPrice += totalProductPrice;
       }
     }
@@ -49,6 +56,7 @@ const addToCartController = async (req, res) => {
     res.status(500).json({ message: 'Error adding to cart', error: error.message });
   }
 };
+
 
 // =============================================================================================
 // 🔁 UPDATE CART QUANTITY CONTROLLER
