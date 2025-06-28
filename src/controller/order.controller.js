@@ -28,7 +28,7 @@ const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
 // order creation is done here when user press buy | can buy either single product or whole cart of multiple products from same api...
 const placeOrderController = async (req, res) => {
   try {
-    const { items, addressId } = req.body;
+    const { items, addressId, totalCartAmount } = req.body;
     const userId = req.user.id;
 
     const user = await User.findById(userId);
@@ -39,24 +39,27 @@ const placeOrderController = async (req, res) => {
       return res.status(404).json({ message: "Address not found" });
     }
 
+    // Enrich each item: get product and shop
     const populatedItems = await Promise.all(
       items.map(async (item) => {
-        const product = await Product.findById(item.productId).populate("shop");
+        const product = await Product.findById(item.productId);
         if (!product) throw new Error("Product not found");
+
+        const shop = await Shop.findById(product.shop); // get shop by ID from product
+
         return {
           productId: product._id,
-          name: product.name,
-          price: product.price,   // --> need to remove this and take amount from req.body so we can put product price either in gram or direct whatever the user want instead of fix
+          name: item.name,
+          price: item.price,
           quantity: item.quantity,
-          totalAmount: product.price * item.quantity,
-          shop: product.shop,
+          priceWithQuantity: item.priceWithQuantity,
+          weightInGrams: item.weightInGrams,
+          shop, // now includes shop._id and shop.email etc.
         };
       })
     );
 
-    const totalCartAmount = populatedItems.reduce((sum, i) => sum + i.totalAmount, 0);
-
-    // Group by shop
+    // Group items by shop ID
     const shopWiseMap = new Map();
     populatedItems.forEach((item) => {
       const shopId = item.shop._id.toString();
@@ -69,7 +72,7 @@ const placeOrderController = async (req, res) => {
       shopWiseMap.get(shopId).items.push(item);
     });
 
-    // Send emails per shop owner
+    // Send emails to shop owners
     for (let [shopId, data] of shopWiseMap.entries()) {
       const ownerEmail = data.shop.email;
 
@@ -93,23 +96,28 @@ const placeOrderController = async (req, res) => {
         </p>
 
         <h3>🧾 Ordered Products</h3>
-        ${data.items.map(i => `
-          <p>
-            <strong>Product Name:</strong> ${i.name}<br>
-            <strong>Product Price (per unit):</strong> ₹${i.price}<br>
-            <strong>Quantity:</strong> ${i.quantity}<br>
-            <strong>Total for this product:</strong> ₹${i.totalAmount}
-          </p>
-          <hr>
-        `).join("")}
+               ${data.items.map(i => `
+                      <p>
+                        <strong>Product Name:</strong> ${i.name}<br>
+                        <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+                        <strong>Quantity:</strong> ${i.quantity}<br>
+                        ${
+                            i.weightInGrams       //--> if  weight in gram is given by the user so it will put the weight in gram in email also to the shop owner if not then he wont
+                            ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
+                            : ""
+                        }
+                        <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+                      </p>
+                      <hr>
+                         `).join("")}
 
-        <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.totalAmount, 0)}</h3>
+        <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
       `;
 
       await sendEmailToShopOwner(ownerEmail, "New Order from Cosysta", html);
     }
 
-    // Save order
+    // Save order in DB
     const order = new Order({
       userId,
       address: selectedAddress,
@@ -118,8 +126,9 @@ const placeOrderController = async (req, res) => {
         name: i.name,
         price: i.price,
         quantity: i.quantity,
-        totalAmount: i.totalAmount,
-        shop: i.shop._id
+        priceWithQuantity: i.priceWithQuantity,
+        weightInGrams: i.weightInGrams,
+        shop: i.shop._id,
       })),
       totalCartAmount,
     });
@@ -141,24 +150,19 @@ const handleGetUserOrdersSummary = async (req, res) => {
   try {
     const orders = await Order.find({ userId }).sort({ createdAt: -1 }).lean();
 
-    const summarizedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const productNames = await Promise.all(
-          order.items.map(async (item) => {
-            const product = await Product.findById(item.productId).select("name");
-            return { name: product?.name || "Product Deleted" }; // wrapped in object
-          })
-        );
+    const summarizedOrders = orders.map((order) => {
+      const productNames = order.items.map((item) => ({
+        name: item.name || "Product Deleted",
+      }));
 
-        return {
-          orderId: order._id,
-          userId: order.userId,
-          createdAt: order.createdAt,
-          products: productNames, // now array of { name: "..." }
-          totalCartAmount: order.totalCartAmount,
-        };
-      })
-    );
+      return {
+        orderId: order._id,
+        userId: order.userId,
+        createdAt: order.createdAt,
+        products: productNames, // ✅ already correct format
+        totalCartAmount: order.totalCartAmount,
+      };
+    });
 
     return res.status(200).json({
       message: "User orders fetched successfully",
@@ -192,23 +196,18 @@ const UserOrderProductsDetails = async (req, res) => {
         const shop = product ? await Shop.findById(product.shop).lean() : null;
 
         return {
-          productName: product?.name || "Product Deleted",
-          productImage: product?.productImage || "N/A",
-          productPrice: product?.price !== undefined ? product.price : "N/A", // --> have to put product price from the order product price not this cz this is static in order it is calculated according to the grams based purchase also so it is sent and calculated by the frontend guy not in backend
+          productName: item.name || product?.name || "Product Deleted",
+          productImage: product?.productImage || "N/A", // optional, fallback to product DB image
+          productPrice: item.price !== undefined ? item.price : "N/A", // ✅ from order
           quantityBought: item.quantity || "N/A",
-          // 💡 Total = price × quantity (if both exist)
-          totalPrice:
-            product?.price !== undefined && item.quantity !== undefined
-              ? product.price * item.quantity
-              : "N/A",
+          weightInGrams: item.weightInGrams || null,
+          totalPrice: item.priceWithQuantity !== undefined ? item.priceWithQuantity : "N/A", // ✅ from order
           shopName: shop?.shopName || "Shop Deleted",
           shopEmail: shop?.email || "N/A",
-          shopMobile: shop?.mobileNumber || "N/A",
+          // shopMobile: shop?.mobileNumber || "N/A",
         };
       })
     );
-
-    const filteredItems = detailedItems.filter(Boolean);
 
     return res.status(200).json({
       orderId: order._id,
@@ -216,7 +215,7 @@ const UserOrderProductsDetails = async (req, res) => {
       totalCartAmount: order.totalCartAmount || "N/A",
       createdAt: order.createdAt,
       address: order.address,
-      products: filteredItems,
+      products: detailedItems,
     });
   } catch (err) {
     console.error("Error fetching order details:", err.message);
@@ -226,6 +225,7 @@ const UserOrderProductsDetails = async (req, res) => {
     });
   }
 };
+
 
 
 

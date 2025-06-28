@@ -17,7 +17,8 @@ const orderSchema = new mongoose.Schema(
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true },
-        totalAmount: { type: Number, required: true },
+        weightInGrams: { type: Number },   //-> here we take product weight in grams (optional) so we can change price of a prodcut according to weight also
+        priceWithQuantity: { type: Number, required: true }, // --> this is the amount calculating product price with quantity he bought
         shop: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Shop",
