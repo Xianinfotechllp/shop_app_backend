@@ -3,11 +3,13 @@ const User = require("../models/user");
 const Shop = require("../models/storeModel");
 const Product = require("../models/product");
 const DeliveryAddress = require("../models/deliveryAddressmodel");
+const Notification = require("../models/notificationModel");
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-
-// nodemailer send email function we have not made in seperate file , we did in function in every file where we are sending email from api..
+// =================================================================================================
+// ============================== 📧 SEND EMAIL TO SHOP OWNER =======================================
+// =================================================================================================
 const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -18,19 +20,24 @@ const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
   });
 
   await transporter.sendMail({
-    from: `"Cosysta App" <${process.env.EMAIL_ID}>`,
+    from: `"Shop App" <${process.env.EMAIL_ID}>`,
     to: shopEmail,
     subject,
     html: htmlContent,
   });
 };
 
-// order creation is done here when user press buy | can buy either single product or whole cart of multiple products from same api...
+// =================================================================================================
+// ============================== 🛒 PLACE ORDER CONTROLLER =========================================
+// =================================================================================================
 const placeOrderController = async (req, res) => {
   try {
     const { items, addressId, totalCartAmount } = req.body;
     const userId = req.user.id;
 
+    // =============================================================================================
+    // 🔍 FETCH USER & DELIVERY ADDRESS
+    // =============================================================================================
     const user = await User.findById(userId);
     const addressDoc = await DeliveryAddress.findOne({ userId });
     const selectedAddress = addressDoc?.addresses?.id(addressId);
@@ -39,14 +46,15 @@ const placeOrderController = async (req, res) => {
       return res.status(404).json({ message: "Address not found" });
     }
 
-    // Enrich each item: get product and shop
+    // =============================================================================================
+    // 📦 Get full product and shop details for each item
+    // =============================================================================================
     const populatedItems = await Promise.all(
       items.map(async (item) => {
         const product = await Product.findById(item.productId);
         if (!product) throw new Error("Product not found");
 
-        const shop = await Shop.findById(product.shop); // get shop by ID from product
-
+        const shop = await Shop.findById(product.shop);
         return {
           productId: product._id,
           name: item.name,
@@ -54,12 +62,14 @@ const placeOrderController = async (req, res) => {
           quantity: item.quantity,
           priceWithQuantity: item.priceWithQuantity,
           weightInGrams: item.weightInGrams,
-          shop, // now includes shop._id and shop.email etc.
+          shop, // includes _id, email, owner
         };
       })
     );
 
-    // Group items by shop ID
+    // =============================================================================================
+    // 🗂️ Group all items shop-wise (so we know which shop gets which products)
+    // =============================================================================================
     const shopWiseMap = new Map();
     populatedItems.forEach((item) => {
       const shopId = item.shop._id.toString();
@@ -72,13 +82,14 @@ const placeOrderController = async (req, res) => {
       shopWiseMap.get(shopId).items.push(item);
     });
 
-    // Send emails to shop owners
+    // =============================================================================================
+    // 📧 SEND EMAILS TO SHOP OWNERS
+    // =============================================================================================
     for (let [shopId, data] of shopWiseMap.entries()) {
       const ownerEmail = data.shop.email;
 
       const html = `
         <h2>🛒 New Order Received</h2>
-
         <h3>👤 Customer Details</h3>
         <p><strong>Name:</strong> ${user.name}</p>
         <p><strong>Email:</strong> ${user.email}</p>
@@ -96,20 +107,15 @@ const placeOrderController = async (req, res) => {
         </p>
 
         <h3>🧾 Ordered Products</h3>
-               ${data.items.map(i => `
-                      <p>
-                        <strong>Product Name:</strong> ${i.name}<br>
-                        <strong>Product Price (per unit):</strong> ₹${i.price}<br>
-                        <strong>Quantity:</strong> ${i.quantity}<br>
-                        ${
-                            i.weightInGrams       //--> if  weight in gram is given by the user so it will put the weight in gram in email also to the shop owner if not then he wont
-                            ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
-                            : ""
-                        }
-                        <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
-                      </p>
-                      <hr>
-                         `).join("")}
+        ${data.items.map(i => `
+          <p>
+            <strong>Product Name:</strong> ${i.name}<br>
+            <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+            <strong>Quantity:</strong> ${i.quantity}<br>
+            ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
+            <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+          </p><hr>
+        `).join("")}
 
         <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
       `;
@@ -117,7 +123,9 @@ const placeOrderController = async (req, res) => {
       await sendEmailToShopOwner(ownerEmail, "New Order from Cosysta", html);
     }
 
-    // Save order in DB
+    // =============================================================================================
+    // 📝 SAVE ORDER TO DB
+    // =============================================================================================
     const order = new Order({
       userId,
       address: selectedAddress,
@@ -135,12 +143,44 @@ const placeOrderController = async (req, res) => {
 
     await order.save();
 
+    // =============================================================================================
+    // 🔔 SAVE NOTIFICATION TO DATABASE OF ORDERS FOR SHOP OWNERS
+    // =============================================================================================
+    const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
+    const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
+
+    for (let shop of shops) {
+      const notificationDoc = new Notification({
+        title: "🛒 New Order Alert!",
+        body: `🎉 You received a new order from ${user.name} on ${order.createdAt}. Check your email for full details.`,
+        type: "order",
+        recipients: [
+          {
+            userId: shop.owner,
+            isRead: false,
+          },
+        ],
+        data: {
+          orderId: order._id,
+          shopId: shop._id,
+          userName: user.name,
+          orderTime: order.createdAt,
+        },
+      });
+
+      await notificationDoc.save();
+    }
+
+    // =============================================================================================
+    // ✅ RESPONSE
+    // =============================================================================================
     res.status(200).json({ message: "Order placed successfully", order });
   } catch (err) {
     console.error("Order error:", err.message);
     res.status(500).json({ message: "Failed to place order", error: err.message });
   }
 };
+
 
 // get api for the order summary | about the orders user has given and when he will click on them we will send the product details from another api..
 

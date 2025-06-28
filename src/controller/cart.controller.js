@@ -1,12 +1,15 @@
 const cartModel = require('../models/cart');
 const productModel = require('../models/product');
 
-//  Add to Cart
+// =============================================================================================
+// 🛒 ADD TO CART CONTROLLER
+// =============================================================================================
 const addToCartController = async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     const userId = req.user.id;
 
+    // 🔍 Check if product exists
     const product = await productModel.findById(productId);
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
@@ -16,6 +19,7 @@ const addToCartController = async (req, res) => {
     let cart = await cartModel.findOne({ userId });
 
     if (!cart) {
+      // 🛒 Create new cart if doesn't exist
       cart = new cartModel({
         userId,
         items: [{
@@ -27,6 +31,7 @@ const addToCartController = async (req, res) => {
         totalCartPrice: totalProductPrice
       });
     } else {
+      // 🔄 Check if product already exists
       const existingItem = cart.items.find(item => item.productId.toString() === productId);
       if (existingItem) {
         return res.status(400).json({
@@ -45,9 +50,10 @@ const addToCartController = async (req, res) => {
   }
 };
 
-// when we will increase quantity of product it will revaluate the price of products and cart and send the response
-
-const updateCartQuantityController = async (req, res) => {
+// =============================================================================================
+// 🔁 UPDATE CART QUANTITY CONTROLLER
+// =============================================================================================
+const updateCartProductQuantityController = async (req, res) => {
   try {
     const userId = req.user.id;
     const { productId } = req.params;
@@ -66,15 +72,13 @@ const updateCartQuantityController = async (req, res) => {
     const product = await productModel.findById(productId);
     if (!product) return res.status(404).json({ message: 'Product not found in DB' });
 
-    // Remove old product total from cart total
+    // 🔁 Update prices
     cart.totalCartPrice -= item.totalProductPrice;
 
-    // Update quantity and prices
     item.quantity = quantity;
     item.productPrice = product.price;
     item.totalProductPrice = product.price * quantity;
 
-    // Add updated product total back to cart total
     cart.totalCartPrice += item.totalProductPrice;
 
     await cart.save();
@@ -85,7 +89,9 @@ const updateCartQuantityController = async (req, res) => {
   }
 };
 
-//  Get Cart Items
+// =============================================================================================
+// 📦 GET USER CART CONTROLLER
+// =============================================================================================
 const getCartController = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -101,7 +107,9 @@ const getCartController = async (req, res) => {
   }
 };
 
-//  Remove Item from Cart
+// =============================================================================================
+// ❌ REMOVE ITEM FROM CART CONTROLLER
+// =============================================================================================
 const removeCartItemController = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -116,6 +124,8 @@ const removeCartItemController = async (req, res) => {
     }
 
     cart.totalCartPrice -= itemToRemove.totalProductPrice;
+
+    // ❌ Remove the item
     cart.items = cart.items.filter(item => item.productId.toString() !== productId);
 
     await cart.save();
@@ -127,10 +137,11 @@ const removeCartItemController = async (req, res) => {
 
 module.exports = {
   addToCartController,
-  updateCartQuantityController,
+  updateCartProductQuantityController,
   getCartController,
   removeCartItemController
 };
+
 
 
 

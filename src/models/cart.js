@@ -20,21 +20,23 @@ const cartSchema = mongoose.Schema(
           min: 1,
         },
         productPrice: {
-          // Individual price of product (without quantity)
           type: Number,
           required: true,
           min: 1,
         },
         totalProductPrice: {
-          // price * quantity
           type: Number,
           required: true,
           min: 1,
         },
+        isInCart: {
+          // ✅ Set default to false; will be turned true only when added to cart
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     totalCartPrice: {
-      // Sum of all totalProductPrice
       type: Number,
       required: true,
       default: 0,

@@ -27,7 +27,7 @@ const getUserNotifications = async (req, res) => {
 
 
 // in this instead of sending all the recipient data we will send only that specific userid recipient of params 
-// so by this the response will become less heave and easy to transfer and read
+// so by this the response will become less heavy and easy to transfer and read
 // we will use this one instead of using the previous one which is sending the whole recipient name with the all notificaiotion
 // in this it will send all notifications but in the response recipient we will only have that specific user_id from params
 // sends only read = false notification , read = true notifications will not be sent 
