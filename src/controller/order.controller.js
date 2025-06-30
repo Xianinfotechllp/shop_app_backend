@@ -183,7 +183,6 @@ const placeOrderController = async (req, res) => {
 
 
 // get api for the order summary | about the orders user has given and when he will click on them we will send the product details from another api..
-
 const handleGetUserOrdersSummary = async (req, res) => {
   const userId = req.params.userId;
 

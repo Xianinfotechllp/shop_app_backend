@@ -1,3 +1,6 @@
+const fs = require("fs");
+const cloudinary = require("cloudinary");
+
 const productModel = require("../models/product");
 const shopModel = require("../models/storeModel");
 const { StatusCodes } = require("http-status-codes");
@@ -242,14 +245,11 @@ const getProductsByUserId = async (req, res) => {
   }
 };
 
+// update product controller also handling image update too..
 const handleUpdateProductById = async (req, res) => {
   const { id } = req.params;
   const adminId = req.user?.id || "unknown";
-  const productData = req.body;
-
-
-console.log("Incoming update body:", req.body);
-
+  let productData = req.body;
 
   debug(
     `Update product request - ID: ${id}, Admin: ${adminId}, Fields: ${Object.keys(
@@ -258,16 +258,28 @@ console.log("Incoming update body:", req.body);
   );
 
   try {
-    // Call the update function
-    const updatedProduct = await productService.updateProductById(
-      id,
-      productData
-    );
+    // =============================================================================================
+    // 📸 HANDLE PRODUCT IMAGE UPLOAD (if file is provided)
+    // =============================================================================================
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(req.file.path, {
+        folder: "products",
+      });
+
+      fs.unlinkSync(req.file.path); // Remove temporary file
+      productData.productImage = result.secure_url;
+    }
+
+    // =============================================================================================
+    // 🛠️ UPDATE PRODUCT USING SERVICE
+    // =============================================================================================
+    const updatedProduct = await productService.updateProductById(id, productData);
 
     info(
       `Product updated successfully - ID: ${id}, Name: ${updatedProduct.name}, Admin: ${adminId}`
     );
-    return res.status(200).json({
+
+    return res.status(StatusCodes.OK).json({
       message: "Product updated successfully",
       product: updatedProduct,
     });
@@ -275,7 +287,8 @@ console.log("Incoming update body:", req.body);
     error(
       `Failed to update product - ID: ${id}, Admin: ${adminId}, Error: ${err.message}`
     );
-    return res.status(err.statusCode || 500).json({
+
+    return res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: err.message || "Internal Server Error",
     });
   }
