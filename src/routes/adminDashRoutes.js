@@ -22,12 +22,12 @@ router.delete("/deleteuser/:id",verifyToken,verifyAdmin,deleteUserController);
 router.get("/getallshops",verifyToken,verifyAdmin,shopController.AdminGetAllShops);
 router.get("/search-shop/:keyword",verifyToken,verifyAdmin, shopController.AdminsearchShopController);
 router.put('/change-shop-ban-status/:shopId',verifyToken,verifyAdmin, shopController.AdminChangeShopBanStatus);
-router.delete("delete-shopById/:id",verifyToken,verifyAdmin, shopController.deleteShop); // Delete shop by ID
+router.delete("/delete-shopById/:id",verifyToken,verifyAdmin, shopController.deleteShop); // Delete shop by ID
 
 
 // product api route of admin pannel -
-router.get("/get-by-shopId/:shopId", getProductsByShopId);
-router.delete("delete-product/:id", handleDeleteProductById);
+router.get("/get-product-by-shopId/:shopId",verifyToken,verifyAdmin, getProductsByShopId);
+router.delete("/delete-product/:id",verifyToken,verifyAdmin, handleDeleteProductById);
 
 
 //subscription details in admin pannel-
