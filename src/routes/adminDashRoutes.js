@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {handleGetAllUsers,handleGetUserById,handleUpdateUser,deleteUserController,getUserLocation,updateUserLocation,getUserDetailsController,AdminsearchUserController} = require("../controller/user.controller");
 const shopController = require("../controller/shop.Controller");
+const {handleCreateProduct,handleGetAllProducts,handleGetProductById,handleUpdateProductById,handleDeleteProductById,getProductsByUserId,getProductsByShopId,getNearbyProductsController,searchProducts } = require("../controller/product.controller");
 const {createPlan,getAllPlans,getPlanById,updatePlan,deletePlan,} = require("../controller/SubscriptionPlanController");
 const {handleStartSubscription,handleCheckSubscriptionStatus,handleGetAllSubscriptions,handleSubscriptionByUser} = require("../controller/subscription.controller");
 const { verifyToken,verifyAdmin } = require("../middleware/verifyToken");
