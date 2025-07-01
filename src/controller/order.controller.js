@@ -62,7 +62,7 @@ const placeOrderController = async (req, res) => {
           quantity: item.quantity,
           priceWithQuantity: item.priceWithQuantity,
           weightInGrams: item.weightInGrams,
-          shop, // includes _id, email, owner
+          shop,
         };
       })
     );
@@ -142,6 +142,81 @@ const placeOrderController = async (req, res) => {
     });
 
     await order.save();
+
+    // =============================================================================================
+    // 🔻 UPDATE PRODUCT STOCK AFTER ORDER
+    // =============================================================================================
+    for (let item of populatedItems) {
+      const product = await Product.findById(item.productId);
+      if (!product) continue;
+
+      const type = product.productType?.toLowerCase();
+
+      if (type === "per kg") {
+        // ➕ Calculate total grams to reduce from stock
+        let totalGrams = item.weightInGrams      // // If weight in grams is given (e.g., 250g), then:
+          ? item.weightInGrams * item.quantity  // // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
+          : item.quantity * 1000;               // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
+                                                // ℹitem.quantity here means how much user is buying
+                                                  //    (not the stock in product model, which is handled separately)
+         
+// item.quantity in order is different it is the quantity user wants to buy and it can be the quantity of grams packet too e.g- 250 grams * 2 quantity = 500 grams
+// product.quantity is different it is the product available stock that shop owner has , we are reducing this with the help of calculating ( item.quantity )
+// 🔴🔴🔴 if order item comes in grams which is less than 1kg and cant be taken as 1 full quantity
+// 🔴🔴🔴 so we have to caluculate and reduct product quantity i.e stock according to grams also
+// 🔴🔴🔴 example product quantity = 9.75  if we buy 250 grams from the product quanatiy available in = 10 so it will be calculated as 9.75 
+//  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 quantity  this quantity is not order item quantity this is present in prodoct model it tells us about the product stock availabe to sell..
+// but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 quantity(stock) 
+// in other product type we dont need to calculate we can directly reduce
+//  the product quantity(stock) in product model - cz (1 item.quantity = 1 product.quantity i.e (stock) ) 
+                                                  
+        const currentStockInGrams = product.quantity * 1000; // Convert current stock to grams
+        const newStockInGrams = currentStockInGrams - totalGrams;
+
+        // Convert grams back to kg and update product.quantity
+        // If newStockInGrams > 0, set quantity = newStockInGrams / 1000
+        // Else, set quantity = 0 (no negative stock)
+        product.quantity = newStockInGrams > 0 ? newStockInGrams / 1000 : 0;
+      } else {
+        // For "Per Pack" or "Per Unit", just reduce quantity directly
+        product.quantity = Math.max(0, product.quantity - item.quantity);
+      }
+
+      await product.save();
+    }
+
+    // =============================================================================================
+    // 📈 UPDATE PRODUCT SOLD QUANTITY
+    // =============================================================================================
+    for (let item of populatedItems) {
+      const product = await Product.findById(item.productId);
+      if (!product) continue;
+
+      const type = product.productType?.toLowerCase();
+
+      if (type === "per kg") {
+        //  Calculate total grams sold
+       let totalGrams = item.weightInGrams          // If weight in grams is given (e.g., 250g), then:
+       ? item.weightInGrams * item.quantity         // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
+       : item.quantity * 1000;                      // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
+                                                  // ℹitem.quantity here means how much user is buying
+                                                  //    (not the stock in product model, which is handled separately)
+
+//  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 sold 
+// but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 sold 
+// in other product type we dont need to calculate we can directly include there ordered quantity as sold
+
+
+
+        const soldInKg = totalGrams / 1000; // Convert grams to kg
+        product.sold += soldInKg; // Add to sold field
+      } else {
+        // For pack or unit-based products, increase sold directly
+        product.sold += item.quantity;
+      }
+
+      await product.save();
+    }
 
     // =============================================================================================
     // 🔔 SAVE NOTIFICATION TO DATABASE OF ORDERS FOR SHOP OWNERS
@@ -278,21 +353,173 @@ module.exports = {
 
 
 
+// -- ----- working order place controller before the product stock and sold calculations ------------------------
+
+
+// const placeOrderController = async (req, res) => {
+//   try {
+//     const { items, addressId, totalCartAmount } = req.body;
+//     const userId = req.user.id;
+
+//     // =============================================================================================
+//     // 🔍 FETCH USER & DELIVERY ADDRESS
+//     // =============================================================================================
+//     const user = await User.findById(userId);
+//     const addressDoc = await DeliveryAddress.findOne({ userId });
+//     const selectedAddress = addressDoc?.addresses?.id(addressId);
+
+//     if (!selectedAddress) {
+//       return res.status(404).json({ message: "Address not found" });
+//     }
+
+//     // =============================================================================================
+//     // 📦 Get full product and shop details for each item
+//     // =============================================================================================
+//     const populatedItems = await Promise.all(
+//       items.map(async (item) => {
+//         const product = await Product.findById(item.productId);
+//         if (!product) throw new Error("Product not found");
+
+//         const shop = await Shop.findById(product.shop);
+//         return {
+//           productId: product._id,
+//           name: item.name,
+//           price: item.price,
+//           quantity: item.quantity,
+//           priceWithQuantity: item.priceWithQuantity,
+//           weightInGrams: item.weightInGrams,
+//           shop, // includes _id, email, owner
+//         };
+//       })
+//     );
+
+//     // =============================================================================================
+//     // 🗂️ Group all items shop-wise (so we know which shop gets which products)
+//     // =============================================================================================
+//     const shopWiseMap = new Map();
+//     populatedItems.forEach((item) => {
+//       const shopId = item.shop._id.toString();
+//       if (!shopWiseMap.has(shopId)) {
+//         shopWiseMap.set(shopId, {
+//           shop: item.shop,
+//           items: [],
+//         });
+//       }
+//       shopWiseMap.get(shopId).items.push(item);
+//     });
+
+//     // =============================================================================================
+//     // 📧 SEND EMAILS TO SHOP OWNERS
+//     // =============================================================================================
+//     for (let [shopId, data] of shopWiseMap.entries()) {
+//       const ownerEmail = data.shop.email;
+
+//       const html = `
+//         <h2>🛒 New Order Received</h2>
+//         <h3>👤 Customer Details</h3>
+//         <p><strong>Name:</strong> ${user.name}</p>
+//         <p><strong>Email:</strong> ${user.email}</p>
+//         <p><strong>Mobile:</strong> ${selectedAddress.phoneNumber}</p>
+
+//         <h3>📦 Delivery Address</h3>
+//         <p>
+//           Country: ${selectedAddress.countryName}<br>
+//           State: ${selectedAddress.state}<br>
+//           Town/City: ${selectedAddress.town}<br>
+//           Area: ${selectedAddress.area}<br>
+//           Landmark: ${selectedAddress.landmark || "N/A"}<br>
+//           Pincode: ${selectedAddress.pincode}<br>
+//           House No: ${selectedAddress.houseNo || "N/A"}
+//         </p>
+
+//         <h3>🧾 Ordered Products</h3>
+//         ${data.items.map(i => `
+//           <p>
+//             <strong>Product Name:</strong> ${i.name}<br>
+//             <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+//             <strong>Quantity:</strong> ${i.quantity}<br>
+//             ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
+//             <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+//           </p><hr>
+//         `).join("")}
+
+//         <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
+//       `;
+
+//       await sendEmailToShopOwner(ownerEmail, "New Order from Cosysta", html);
+//     }
+
+//     // =============================================================================================
+//     // 📝 SAVE ORDER TO DB
+//     // =============================================================================================
+//     const order = new Order({
+//       userId,
+//       address: selectedAddress,
+//       items: populatedItems.map(i => ({
+//         productId: i.productId,
+//         name: i.name,
+//         price: i.price,
+//         quantity: i.quantity,
+//         priceWithQuantity: i.priceWithQuantity,
+//         weightInGrams: i.weightInGrams,
+//         shop: i.shop._id,
+//       })),
+//       totalCartAmount,
+//     });
+
+//     await order.save();
+
+//     // =============================================================================================
+//     // 🔔 SAVE NOTIFICATION TO DATABASE OF ORDERS FOR SHOP OWNERS
+//     // =============================================================================================
+//     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
+//     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
+
+//     for (let shop of shops) {
+//       const notificationDoc = new Notification({
+//         title: "🛒 New Order Alert!",
+//         body: `🎉 You received a new order from ${user.name} on ${order.createdAt}. Check your email for full details.`,
+//         type: "order",
+//         recipients: [
+//           {
+//             userId: shop.owner,
+//             isRead: false,
+//           },
+//         ],
+//         data: {
+//           orderId: order._id,
+//           shopId: shop._id,
+//           userName: user.name,
+//           orderTime: order.createdAt,
+//         },
+//       });
+
+//       await notificationDoc.save();
+//     }
+
+//     // =============================================================================================
+//     // ✅ RESPONSE
+//     // =============================================================================================
+//     res.status(200).json({ message: "Order placed successfully", order });
+//   } catch (err) {
+//     console.error("Order error:", err.message);
+//     res.status(500).json({ message: "Failed to place order", error: err.message });
+//   }
+// };
 
 
 
 
+//------- end of working order place controller before the product stock and sold calculations -----------------------------
+
+
+//----------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 
 
 
-
-
-
-
-
-
-
-
+//------------ ----------- previous developer code not mine and not useful right now------------------
 
 
 // const orderService = require("../service/order.service");
