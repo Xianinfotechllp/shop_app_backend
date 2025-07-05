@@ -12,7 +12,16 @@ const mainRouter = require("./routes/index");
 
 const app = express();
 
-app.use(cors());
+// app.use(cors());
+// solving netlify issue using this cors - if any error occur just remove and use previous one
+
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, origin); // reflect the requesting origin
+  },
+  credentials: true
+}));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 

@@ -62,7 +62,7 @@ const placeOrderController = async (req, res) => {
           quantity: item.quantity,
           priceWithQuantity: item.priceWithQuantity,
           weightInGrams: item.weightInGrams,
-          shop,
+          shop, // includes _id, email, owner
         };
       })
     );
