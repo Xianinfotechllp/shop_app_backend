@@ -4,7 +4,8 @@ const shopController = require("../controller/shop.Controller");
 const upload = require("../middleware/multer");
 const { verifyToken } = require("../middleware/verifyToken");
 
-// CRUD routes
+// CRUD routes - /api/shops
+
 router.post("/", upload.single("headerImage"), shopController.createShop); // Create shop
 router.get("/", shopController.getShops); // Get all shops
 router.get("/nearby/:userId", shopController.getNearbyShops);

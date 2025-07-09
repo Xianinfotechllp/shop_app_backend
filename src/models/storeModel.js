@@ -1,3 +1,5 @@
+// models/storeModel.js (Shop Model)
+
 const mongoose = require("mongoose");
 
 const shopSchema = mongoose.Schema(
@@ -5,59 +7,36 @@ const shopSchema = mongoose.Schema(
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
-      // required: true,
     },
-    shopName: {
-      type: String,
-      // required: true,
-    },
-    category: [
-      {
-        type: String,
-        // required: true,
-      },
-    ],
-    sellerType: {
-      type: String,
-      // required: true,
-    },
-    state: {
-      type: String,
-      // required: true,
-    },
-    place: {
-      type: String,
-      // required: true,
-    },
-    locality: {
-      type: String,
-      // required: true,
-    },
+    shopName: { type: String },
+    category: [{ type: String }],
+    sellerType: { type: String },
+    state: { type: String },
+    place: { type: String },
+    locality: { type: String },
     pinCode: {
       type: String,
-      // required: true,
       match: /^[0-9]{6}$/,
     },
-    email: {
-      type: String,
-    },
-    landlineNumber: {
-      type: String,
-    },
-    mobileNumber: {
-      type: String,
-    },
+    email: { type: String },
+    landlineNumber: { type: String },
+    mobileNumber: { type: String },
     isBanned: {
-     type: Boolean,         // admin can ban any shop which is fraudant and then this shop will not be seen by "user" but admin can see it 
-    default: false,
-  },
-    headerImage: {
-      type: String,
+      type: Boolean,
+      default: false,
+    },
+    headerImage: { type: String },
+
+    // ✅ NEW FIELDS
+    agentCode: { type: String }, // optional
+    registeredBySalesman: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Salesman",
+      default: null,
     },
   },
   { timestamps: true }
 );
 
 const Shop = mongoose.model("Shop", shopSchema);
-
 module.exports = Shop;

@@ -63,49 +63,49 @@ async function handleGetUserById(req, res) {
   }
 }
 
-const handleUpdateUser = async (req, res) => {
-  const { id: targetUserId } = req.body;
-  const updateData = req.body;
-  const requester = req.user;
-  const requesterId = requester?.id || 'unknown';
+// const handleUpdateUser = async (req, res) => {
+//   const { id: targetUserId } = req.body;
+//   const updateData = req.body;
+//   const requester = req.user;
+//   const requesterId = requester?.id || 'unknown';
 
-  debug(`Update user request - Target ID: ${targetUserId}, Requester: ${requesterId}, Role: ${requester?.role || 'unknown'}`);
+//   debug(`Update user request - Target ID: ${targetUserId}, Requester: ${requesterId}, Role: ${requester?.role || 'unknown'}`);
 
-  if (!requester || !requester.id) {
-    info(`Unauthorized update attempt without valid token - Attempted target: ${targetUserId}`);
-    return res.status(StatusCodes.UNAUTHORIZED).json({
-      success: false,
-      message: "Unauthorized. Invalid or missing token.",
-    });
-  }
+//   if (!requester || !requester.id) {
+//     info(`Unauthorized update attempt without valid token - Attempted target: ${targetUserId}`);
+//     return res.status(StatusCodes.UNAUTHORIZED).json({
+//       success: false,
+//       message: "Unauthorized. Invalid or missing token.",
+//     });
+//   }
 
-  const userIdToUpdate = requester.role === "admin" ? targetUserId : requester.id;
+//   const userIdToUpdate = requester.role === "admin" ? targetUserId : requester.id;
 
-  if (!userIdToUpdate) {
-    info(`User update failed - Missing user ID, Requester: ${requesterId}`);
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      success: false,
-      message: "User ID is required for updating.",
-    });
-  }
+//   if (!userIdToUpdate) {
+//     info(`User update failed - Missing user ID, Requester: ${requesterId}`);
+//     return res.status(StatusCodes.BAD_REQUEST).json({
+//       success: false,
+//       message: "User ID is required for updating.",
+//     });
+//   }
 
-  try {
-    const updatedUser = await updateUser(userIdToUpdate, updateData, requester);
+//   try {
+//     const updatedUser = await updateUser(userIdToUpdate, updateData, requester);
 
-    info(`User updated successfully - ID: ${userIdToUpdate}, Updated by: ${requesterId}, Fields updated: ${Object.keys(updateData).join(', ')}`);
-    return res.status(StatusCodes.OK).json({
-      success: true,
-      message: "User updated successfully",
-      user: updatedUser,
-    });
-  } catch (err) {
-    error(`User update failed - ID: ${userIdToUpdate}, Requester: ${requesterId}, Error: ${err.message}`);
-    return res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
+//     info(`User updated successfully - ID: ${userIdToUpdate}, Updated by: ${requesterId}, Fields updated: ${Object.keys(updateData).join(', ')}`);
+//     return res.status(StatusCodes.OK).json({
+//       success: true,
+//       message: "User updated successfully",
+//       user: updatedUser,
+//     });
+//   } catch (err) {
+//     error(`User update failed - ID: ${userIdToUpdate}, Requester: ${requesterId}, Error: ${err.message}`);
+//     return res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
 
 // DELETE - Delete user by ID
 const deleteUserController = async (req, res) => {
@@ -255,13 +255,52 @@ const getUserDetailsController = async (req, res) => {
   }
 };
 
+// =============================================================================================
+// 🔄 UPDATE USER (PUT - partial allowed, updates only sent fields)
+// =============================================================================================
+const updateUserController = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const updateData = { ...req.body };
+
+    // ❌ Prevent password update from here
+    if (updateData.password) {
+      return res.status(400).json({
+        message: "Password cannot be updated from this route",
+      });
+    }
+
+    // Check if user exists
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // ✅ Update only provided fields (excluding password)
+    const updatedUser = await userModel.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
 module.exports = {
   handleGetAllUsers,
   handleGetUserById,
-  handleUpdateUser,
+  // handleUpdateUser,  --> we made the update user controller
   deleteUserController,
   getUserLocation,
   updateUserLocation,
   getUserDetailsController,
-  AdminsearchUserController
+  AdminsearchUserController,
+  updateUserController
 };

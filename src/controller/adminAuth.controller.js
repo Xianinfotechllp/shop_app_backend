@@ -2,6 +2,9 @@ const adminModel = require('../models/admin');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { info, error, debug } = require('../middleware/logger'); 
+const Salesman = require('../models/Salesman.model');
+const MarketingManager = require('../models/MarketingManager.model');
+
 
 const handleAdminRegister = async (req, res) => {
     try {
@@ -93,7 +96,84 @@ const handleAdminLogin = async (req, res) => {
     }
 };
 
+// =============================================================================================
+// 🎯 Assign or Update Agent Code to Salesman
+// =============================================================================================
+const assignAgentCodeToSalesman = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { agentCode } = req.body;
+
+    if (!agentCode) {
+      return res.status(400).json({ message: 'Agent code is required' });
+    }
+
+    const updatedSalesman = await Salesman.findByIdAndUpdate(
+      id,
+      { agentCode },
+      { new: true }
+    );
+
+    if (!updatedSalesman) {
+      return res.status(404).json({ message: 'Salesman not found' });
+    }
+
+    res.status(200).json({
+      message: 'Agent code assigned successfully',
+      updatedSalesman,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// =============================================================================================
+// ✅ Approve Marketing Manager
+// =============================================================================================
+const approveManager = async (req, res) => {
+  try {
+    const { managerId } = req.params;
+    const updated = await MarketingManager.findByIdAndUpdate(
+      managerId,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: 'Manager not found' });
+
+    res.json({ message: 'Manager approved successfully', manager: updated });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// =============================================================================================
+// ✅ Approve Salesman
+// =============================================================================================
+const approveSalesman = async (req, res) => {
+  try {
+    const { salesmanId } = req.params;
+    const updated = await Salesman.findByIdAndUpdate(
+      salesmanId,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: 'Salesman not found' });
+
+    res.json({ message: 'Salesman approved successfully', salesman: updated });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 module.exports = {
     handleAdminRegister,
-    handleAdminLogin
+    handleAdminLogin,
+    assignAgentCodeToSalesman,
+    approveManager,
+  approveSalesman,
 };

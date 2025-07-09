@@ -31,7 +31,31 @@ const verifyAdmin = (req, res, next) => {
   next();
 };
 
+
+// --- token middleware for manager and sales man
+
+const verifyManager = (req, res, next) => {
+  if (req.user.role !== "manager") {
+    info(`Access denied: Not a manager - User ID: ${req.user.id}`);
+    return res.status(403).json({ message: "Managers only" });
+  }
+  next();
+};
+
+const verifySalesman = (req, res, next) => {
+  if (req.user.role !== "salesman") {
+    info(`Access denied: Not a salesman - User ID: ${req.user.id}`);
+    return res.status(403).json({ message: "Salesmen only" });
+  }
+  next();
+};
+
+
+
+
 module.exports = {
   verifyToken,
   verifyAdmin,
+  verifyManager,
+ verifySalesman
 };

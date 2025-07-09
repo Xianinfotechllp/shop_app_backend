@@ -7,26 +7,43 @@ const { StatusCodes } = require("http-status-codes");
 const userModel = require("../models/user");
 const Notification = require("../models/notificationModel"); // ✅ Add this
 const admin = require("../config/admin");
+const Salesman = require("../models/Salesman.model");
 
 // ✅ Create Shop 
+
 const createShop = async (req, res) => {
   try {
-    const { shopName, category, sellerType, state, locality, place, pinCode, userId, email, mobileNumber, landlineNumber } = req.body;
-
-    // ------------------------ 📤 Optional Image Upload ------------------------
+    const {
+      shopName,
+      category,
+      sellerType,
+      state,
+      locality,
+      place,
+      pinCode,
+      userId,
+      email,
+      mobileNumber,
+      landlineNumber,
+      agentCode, // ✅ optional field
+    } = req.body;
 
     let imageUrl = null;
-
     if (req.file) {
       const result = await cloudinary.v2.uploader.upload(req.file.path, {
         folder: "shops",
       });
       imageUrl = result.secure_url;
-      fs.unlinkSync(req.file.path); // remove local file
+      fs.unlinkSync(req.file.path);
     }
 
-    // ------------------------ 🏪 Create Shop in DB ------------------------
+    // ✅ Check if agent code matches any Salesman
+    let matchedSalesman = null;
+    if (agentCode) {
+      matchedSalesman = await Salesman.findOne({ agentCode: agentCode });
+    }
 
+    // ✅ Create shop
     const newShop = new Shop({
       shopName,
       category: Array.isArray(category) ? category : [category],
@@ -40,15 +57,21 @@ const createShop = async (req, res) => {
       email,
       mobileNumber,
       landlineNumber,
+      agentCode,
+      registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
     });
 
     await newShop.save();
 
-    // ------------------------ 🔔 Send FCM Notification ------------------------
+    // ✅ Link shop to Salesman (if matched)
+    if (matchedSalesman) {
+      matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+      await matchedSalesman.save();
+    }
 
+    // 🔔 Send FCM Notification
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
     const allTokens = users.flatMap((user) => user.fcmTokens);
-
     let fcmResponse = null;
 
     if (allTokens.length > 0) {
@@ -59,16 +82,11 @@ const createShop = async (req, res) => {
         },
         tokens: allTokens,
       };
-
       fcmResponse = await admin.messaging().sendEachForMulticast(message);
-
       info(`✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`);
-    } else {
-      info("ℹ️ No FCM tokens found. Notification not sent.");
     }
 
-    // ------------------------ 💾 Save Notification in DB ------------------------
-
+    // 💾 Save notification
     const notificationDoc = new Notification({
       title: "🛍️ New Shop Alert!",
       body: `Check out new shop "${shopName}". Explore now!`,
@@ -85,8 +103,6 @@ const createShop = async (req, res) => {
 
     await notificationDoc.save();
 
-    // ------------------------ ✅ Send Final Response ------------------------
-
     res.status(StatusCodes.CREATED).json({
       message: "Shop created successfully",
       shop: newShop,
@@ -97,10 +113,14 @@ const createShop = async (req, res) => {
     });
 
   } catch (err) {
-    error("❌ Error in createShop:", err); // full error for better debugging
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message || "Server error", error: err });
+    error("❌ Error in createShop:", err);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: err.message || "Server error",
+      error: err,
+    });
   }
 };
+
 
 // get all shops for user module not for admin pannel
 
@@ -155,7 +175,7 @@ const getShopByUser = async (req, res) => {
     }
 
     const shops = await Shop.find({ owner: user.id }).select(
-      "_id shopName sellerType state locality place headerImage category pinCode"
+      "_id shopName sellerType state locality place headerImage category pinCode agentCode registeredBySalesman"
     );
 
     if (!shops || shops.length === 0) {

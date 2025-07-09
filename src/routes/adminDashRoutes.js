@@ -5,8 +5,9 @@ const shopController = require("../controller/shop.Controller");
 const {handleCreateProduct,handleGetAllProducts,handleGetProductById,handleUpdateProductById,handleDeleteProductById,getProductsByUserId,getProductsByShopId,getNearbyProductsController,searchProducts } = require("../controller/product.controller");
 const {createPlan,getAllPlans,getPlanById,updatePlan,deletePlan,} = require("../controller/SubscriptionPlanController");
 const {handleStartSubscription,handleCheckSubscriptionStatus,handleGetAllSubscriptions,handleSubscriptionByUser} = require("../controller/subscription.controller");
+const { assignAgentCodeToSalesman } = require('../controller/adminAuth.controller');
 const { verifyToken,verifyAdmin } = require("../middleware/verifyToken");
-
+const { approveManager, approveSalesman } = require('../controller/adminAuth.controller');
 
 // users api route of admin pannel -
 
@@ -42,5 +43,16 @@ router.get("/getallplan",verifyToken,verifyAdmin, getAllPlans);
 router.get("/getplanbyid/:id",verifyToken,verifyAdmin, getPlanById);
 router.put("/updateplan/:id",verifyToken,verifyAdmin, updatePlan);
 router.delete("/deleteplan/:id",verifyToken,verifyAdmin, deletePlan);
+
+
+// PATCH adminDashboard/salesman/:id/agent-code
+router.patch('/salesman/:id/agent-code',  assignAgentCodeToSalesman);
+// verifyToken, verifyAdmin,
+
+// PATCH /adminDashboard/approve/manager/:managerId
+router.patch('/approve/manager/:managerId', approveManager);
+
+// PATCH /adminDashboard/approve/salesman/:salesmanId
+router.patch('/approve/salesman/:salesmanId', approveSalesman);
 
 module.exports = router;
